@@ -1,0 +1,32 @@
+apply plugin: 'com.android.library'
+android {
+    signingConfigs {
+        releaseSigning {
+            keyAlias 'TestKey'
+            keyPassword 'testkey'
+            storeFile file('C:/Users/danil/AndroidStudioProjects/Keys/TestKey.jks')
+            storePassword 'testkey'
+        }
+    }
+    buildToolsVersion '27.0.3'
+    compileSdkVersion 25
+    defaultConfig {
+        minSdkVersion 25
+        targetSdkVersion 25
+        signingConfig signingConfigs.releaseSigning
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+        debug {
+            signingConfig signingConfigs.releaseSigning
+        }
+    }
+    productFlavors {
+    }
+}
+
+dependencies {
+}
