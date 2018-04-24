@@ -1,6 +1,7 @@
 package com.danilo.corpusvr;
 
 import android.content.Context;
+import android.opengl.Matrix;
 
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
@@ -40,6 +41,7 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	private static final Scalar COLOR_RED = new Scalar(255, 0, 0);
 	private static final Scalar COLOR_GREEN = new Scalar(0, 255, 0);
 	private static final Scalar COLOR_BLUE = new Scalar(0, 0, 255);
+	private static final Scalar COLOR_YELLOW = new Scalar(255, 255, 0);
 
 	private static final int BLUR_SIZE = 5;
 	private static final int ELEMENT_SIZE = 4;
@@ -53,12 +55,21 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	private static final double MIN_LENGTH = 10;
 	private static final double MAX_LENGTH = 80;
 
+	private static final float NEAR = 0.1f;
+	private static final float FAR  = 100f;
+
+	private static final int MAX_BAD_TRACKING_FRAMES = 5;
+
 	private HandTracking mHandTracking;
-	private int mFrameWidth = -1;
-	private int mFrameHeigth = -1;
+	private int mScreenWidth = -1;
+	private int mScreenHeight = -1;
 	private float mFOVX = 0;
 	private float mFOVY = 0;
 	private MatOfDouble mProjectionCV;
+	private float[] mProjectionGL;
+	private float[] mProjectionGLInv;
+	private float[] mWorldPoint;
+	private float[] mViewMatrix = new float[]{1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, -4.0f, 1.0f};
 	private Mat mRGBA;
 	private Mat mHSV;
 	private Mat mBinMat;
@@ -91,6 +102,8 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	private Point mEndPt;
 	private Point mFarthestPt;
 	private HandTracking.HandStatus mHandStatus;
+	private float mAngle;
+	private int mBadTrackingFrames;
 
 	private double innerAngle(double ax, double ay, double bx, double by, double cx, double cy)
 	{
@@ -103,6 +116,35 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		double A = Math.acos((CBx * CAx + CBy * CAy) / (Math.sqrt(CBx * CBx + CBy * CBy) * Math.sqrt(CAx * CAx + CAy * CAy)));	// (a² + b² − c²) / 2
 																																// ( (sqrt( (Ax - Bx)*(Ax - Bx) + (Ay - By)*(Ay - By) ))² + (sqrt( (Ax - Cx)*(Ax - Cx) + (Ay - Cy)*(Ay - Cy) ))² − (sqrt( (Bx - Cx)*(Bx - Cx) + (By - Cy)*(By - Cy) ))²) / 2
 		return (A * 180 / PI);
+	}
+
+	private float[] ScreenToWorld(Point screenPoint)
+	{
+		if (mWorldPoint == null)
+			mWorldPoint = new float[4];
+
+		if (mProjectionGLInv == null)
+		{
+			mProjectionGLInv = new float[16];
+			Matrix.multiplyMM(mProjectionGLInv, 0, mProjectionGL, 0, mViewMatrix , 0);
+			Matrix.invertM(mProjectionGLInv, 0, mProjectionGLInv, 0);
+		}
+
+		mWorldPoint[0] = (2.0f * ((float) (screenPoint.x) / (float) (mScreenWidth))) - 1.0f;
+		mWorldPoint[1] = 1.0f - (2.0f * ((float) (screenPoint.y) / (float) (mScreenHeight)));
+		mWorldPoint[2] = 2.0f * 0.5f/*Z*/ - 1.0f;
+		mWorldPoint[3] = 1.0f;
+
+		Matrix.multiplyMV(mWorldPoint, 0, mProjectionGLInv, 0, mWorldPoint, 0);
+
+//		mWorldPoint[3] = 1.0f / mWorldPoint[3];
+//
+//		mWorldPoint[0] *= mWorldPoint[3];
+//		mWorldPoint[1] *= mWorldPoint[3];
+//		mWorldPoint[2] *= mWorldPoint[3];
+
+
+		return mWorldPoint;
 	}
 
 	public MyJavaCameraView(Context context, int cameraId, HandTracking handTracking)
@@ -131,28 +173,45 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 			mProjectionCV.create(3, 3, CvType.CV_64FC1);
 
 			final float fovAspectRatio = mFOVX / mFOVY;
-			double diagonalPx = Math.sqrt((Math.pow(mFrameWidth, 2.0) + Math.pow(mFrameWidth / fovAspectRatio, 2.0)));
+			double diagonalPx = Math.sqrt((Math.pow(mScreenWidth, 2.0) + Math.pow(mScreenWidth / fovAspectRatio, 2.0)));
 			double diagonalFOV = Math.sqrt((Math.pow(mFOVX, 2.0) + Math.pow(mFOVY, 2.0)));
 			double focalLengthPx = diagonalPx / (2.0 * Math.tan(0.5 * diagonalFOV * Math.PI / 180f));
 
+			// https://www.mathworks.com/help/vision/ug/camera-calibration.html
+			// Intrinsic Parameters
 			mProjectionCV.put(0, 0, focalLengthPx);
 			mProjectionCV.put(0, 1, 0.0);
-			mProjectionCV.put(0, 2, 0.5 * mFrameWidth);
+			mProjectionCV.put(0, 2, 0.5 * mScreenWidth);
 			mProjectionCV.put(1, 0, 0.0);
 			mProjectionCV.put(1, 1, focalLengthPx);
-			mProjectionCV.put(1, 2, 0.5 * mFrameHeigth);
-			mProjectionCV.put(2, 0, 0.0);
-			mProjectionCV.put(2, 1, 0.0);
+			mProjectionCV.put(1, 2, 0.5 * mScreenHeight);
+			mProjectionCV.put(2, 0, 0.0); // Optical center x
+			mProjectionCV.put(2, 1, 0.0); // Optical center y
 			mProjectionCV.put(2, 2, 1.0);
 		}
 		return mProjectionCV;
 	}
 
+	private float[] getProjectionGL()
+	{
+		if (mProjectionGL == null)
+		{
+			mProjectionGL = new float[16];
+
+			float fovX = getFOVX();
+			float aspectR = (float) mScreenWidth / (float) mScreenHeight;
+			float right = (float) Math.tan(0.5f * fovX * Math.PI / 180.0f) * NEAR;
+			float top = right / aspectR;
+			Matrix.frustumM(mProjectionGL, 0, -right, right, -top, top, NEAR, FAR);
+		}
+		return mProjectionGL;
+	}
+
 	@Override
 	public void onCameraViewStarted(int width, int height)
 	{
-		mFrameWidth = width;
-		mFrameHeigth = height;
+		mScreenWidth = width;
+		mScreenHeight = height;
 		//mRGBA = new Mat(height, width, CvType.CV_8UC4);
 		mHSV = new Mat(height, width, CvType.CV_8UC3);
 		mBinMat = new Mat(height, width, CvType.CV_8UC1);
@@ -194,6 +253,13 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		Size elementSize = new Size(2 * ELEMENT_SIZE + 1, 2 * ELEMENT_SIZE + 1);
 		Point elementPoint = new Point(ELEMENT_SIZE, ELEMENT_SIZE);
 		mElementMat = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, elementSize, elementPoint);
+		mProjectionGL = null;
+		mProjectionGLInv = null;
+		mProjectionCV = null;
+		getProjectionGL();
+		getProjectionCV();
+		mAngle = 0;
+		mBadTrackingFrames = 0;
 	}
 
 	@Override
@@ -217,6 +283,8 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	{
 		mRGBA = inputFrame.rgba();
 
+		mHandStatus.mRender = false;
+
 		//FUCKJNI(mRGBA.getNativeObjAddr());
 		Imgproc.cvtColor(mRGBA, mHSV, Imgproc.COLOR_RGB2HSV);
 		Core.inRange(mHSV, mMinHSV1, mMaxHSV1, mBinMat);
@@ -226,6 +294,8 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		//Core.inRange(mHSV, mMinHSV1, mMaxHSV1, mMask1);
 		//Core.inRange(mHSV, mMinHSV2, mMaxHSV2, mMask2);
 		//Core.add(mMask1, mMask2, mMask);
+
+		//Imgproc.circle(mRGBA, new Point(1280, 720), 6, COLOR_RED, 2);
 
 		Imgproc.findContours(mBinMat, mListOfContours, mHierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 		if (!mListOfContours.isEmpty())
@@ -276,6 +346,37 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 							Imgproc.circle(mRGBA, mStartPt, 5, COLOR_BLUE, 2);
 							Imgproc.circle(mRGBA, mEndPt, 5, COLOR_BLUE, 2);
 							Imgproc.circle(mRGBA, mFarthestPt, 5, COLOR_BLUE, 2);
+
+							Imgproc.circle(mRGBA, mObjBBCenter, 5, COLOR_YELLOW, 2);
+
+							ScreenToWorld(mObjBBCenter);
+
+							mHandStatus.mPose[0] = 1.0f;
+							mHandStatus.mPose[1] = 0;
+							mHandStatus.mPose[2] = 0;
+							mHandStatus.mPose[3] = 0;
+							mHandStatus.mPose[4] = 0;
+							mHandStatus.mPose[5] = 1.0f;
+							mHandStatus.mPose[6] = 0;
+							mHandStatus.mPose[7] = 0;
+							mHandStatus.mPose[8] = 0;
+							mHandStatus.mPose[9] = 0;
+							mHandStatus.mPose[10] = 1.0f;
+							mHandStatus.mPose[11] = 0;
+							mHandStatus.mPose[12] = mWorldPoint[0];
+							mHandStatus.mPose[13] = mWorldPoint[1];
+							mHandStatus.mPose[14] = mWorldPoint[2];
+							mHandStatus.mPose[15] = mWorldPoint[3];
+
+							Matrix.scaleM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, 0.05f, 0.05f, 0.05f);
+							Matrix.rotateM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, mAngle, 1, 0, 0);
+							if (mAngle == 360)
+								mAngle = 0;
+							else
+								mAngle += 1.5;
+
+							mHandStatus.mRender = true;
+							mBadTrackingFrames = 0;
 						}
 					}
 				}
@@ -285,6 +386,21 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 			mListOfContours.get(mLargestContour).release();
 			mListOfContours.clear();
 		}
+
+		if (mHandStatus.mRender == false)
+		{
+			if (mBadTrackingFrames < 15)
+			{
+				++mBadTrackingFrames;
+				mHandStatus.mRender = true;
+			}
+			else // Lost tracking
+			{
+				mBadTrackingFrames = 0;
+			}
+		}
+
+		mHandTracking.setObjStatus(mHandStatus);
 
 		return mRGBA;
 	}

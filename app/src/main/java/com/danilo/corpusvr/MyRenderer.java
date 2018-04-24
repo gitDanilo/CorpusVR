@@ -59,7 +59,9 @@ public class MyRenderer extends Renderer
 	@Override
 	protected void initScene()
 	{
-		setFrameRate(60);
+		setFrameRate(30);
+
+		getCurrentCamera().setProjectionMatrix(getProjectionGL());
 
 		mPose = new Matrix4();
 
@@ -84,12 +86,12 @@ public class MyRenderer extends Renderer
 			Log.d(TAG, "TEXTURE ERROR");
 		}
 
-		mSphere = new Sphere(2, 24, 24);
+		mSphere = new Sphere(1, 24, 24);
 		mSphere.setMaterial(material);
-		getCurrentScene().addChild(mSphere);
-		mSphere.setVisible(false);
 
-		getCurrentCamera().setProjectionMatrix(getProjectionGL());
+		getCurrentScene().addChild(mSphere);
+
+		mSphere.setVisible(false);
 	}
 
 	@Override
@@ -106,8 +108,8 @@ public class MyRenderer extends Renderer
 			mPose.setAll(mHandStatus.mPose);
 			mSphere.calculateModelMatrix(mPose);
 		}
-		else if (mSphere.isVisible())
-			mSphere.setVisible(false);
+//		else if (mSphere.isVisible())
+//			mSphere.setVisible(false);
 
 	}
 

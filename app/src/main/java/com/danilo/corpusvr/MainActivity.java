@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.PixelFormat;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -16,6 +17,7 @@ import android.widget.FrameLayout;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.OpenCVLoader;
+import org.rajawali3d.view.ISurface;
 import org.rajawali3d.view.SurfaceView;
 
 public class MainActivity extends AppCompatActivity
@@ -82,22 +84,22 @@ public class MainActivity extends AppCompatActivity
 		mFrame.addView(mJavaCameraView);
 
 		// Rajawali Surface View
-//		mSurfaceView = new SurfaceView(this);
-//		mSurfaceView.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-//		mSurfaceView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
-//
-//		mSurfaceView.setZOrderMediaOverlay(true);
-//		mSurfaceView.getHolder().setFormat(PixelFormat.TRANSPARENT);
-//		mSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0);
-//
-//		mSurfaceView.setTransparent(true);
-//		mSurfaceView.setRenderMode(ISurface.RENDERMODE_WHEN_DIRTY);
-//		mSurfaceView.setAntiAliasingMode(ISurface.ANTI_ALIASING_CONFIG.MULTISAMPLING);
-//		mSurfaceView.setFrameRate(60);
-//		mFrame.addView(mSurfaceView);
-//
-//		mRenderer = new MyRenderer(this, mJavaCameraView, mHandTracking);
-//		mSurfaceView.setSurfaceRenderer(mRenderer);
+		mSurfaceView = new SurfaceView(this);
+		mSurfaceView.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+		mSurfaceView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+
+		mSurfaceView.setZOrderMediaOverlay(true);
+		mSurfaceView.getHolder().setFormat(PixelFormat.TRANSPARENT);
+		mSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0);
+
+		mSurfaceView.setTransparent(true);
+		mSurfaceView.setRenderMode(ISurface.RENDERMODE_WHEN_DIRTY);
+		mSurfaceView.setAntiAliasingMode(ISurface.ANTI_ALIASING_CONFIG.MULTISAMPLING);
+		mSurfaceView.setFrameRate(60);
+		mFrame.addView(mSurfaceView);
+
+		mRenderer = new MyRenderer(this, mJavaCameraView, mHandTracking);
+		mSurfaceView.setSurfaceRenderer(mRenderer);
 	}
 
 	@Override
