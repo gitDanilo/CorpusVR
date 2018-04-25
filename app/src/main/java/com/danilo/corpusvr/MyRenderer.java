@@ -19,6 +19,7 @@ public class MyRenderer extends Renderer
 	private static final String TAG = "MyRenderer";
 	private static final float NEAR = 0.1f;
 	private static final float FAR  = 100f;
+	private static final long MAX_BAD_TRACK_FRAMES = 5;
 	private MyJavaCameraView mJavaCameraView;
 	private Matrix4 mPose = null;
 	private Matrix4 mProjectionGL = null;
@@ -27,6 +28,8 @@ public class MyRenderer extends Renderer
 	private HandTracking.HandStatus mHandStatus = null;
 	private DirectionalLight mDirectionalLight = null;
 	private Sphere mSphere = null;
+	private long mBadTrackFramesCount;
+	private double mAngle;
 
 	MyRenderer(Context context, MyJavaCameraView JavaCameraView, HandTracking Status)
 	{
@@ -92,6 +95,9 @@ public class MyRenderer extends Renderer
 		getCurrentScene().addChild(mSphere);
 
 		mSphere.setVisible(false);
+
+		mBadTrackFramesCount = 0;
+		mAngle = 0;
 	}
 
 	@Override
@@ -100,16 +106,32 @@ public class MyRenderer extends Renderer
 		super.onRender(ellapsedRealtime, deltaTime);
 
 		mHandStatus = mHandTracking.getObjStatus();
-		if (mHandStatus.mRender)
+		if (mHandStatus.mRender || mBadTrackFramesCount <= MAX_BAD_TRACK_FRAMES)
 		{
+			if (mHandStatus.mRender)
+				mBadTrackFramesCount = 0;
+			else
+				++mBadTrackFramesCount;
+
 			if (!mSphere.isVisible())
 				mSphere.setVisible(true);
 
 			mPose.setAll(mHandStatus.mPose);
+			mPose.scale(0.05d, 0.05d, 0.05d);
+			mPose.rotate(1, 0, 0, mAngle);
+
+			if (mAngle < 360)
+				mAngle += 2.2d;
+			else
+				mAngle = 0;
+
+//			Matrix.scaleM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, 0.05f, 0.05f, 0.05f);
+//			Matrix.rotateM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, mAngle, 1, 0, 0);
+
 			mSphere.calculateModelMatrix(mPose);
 		}
-//		else if (mSphere.isVisible())
-//			mSphere.setVisible(false);
+		else if (mSphere.isVisible())
+			mSphere.setVisible(false);
 
 	}
 
