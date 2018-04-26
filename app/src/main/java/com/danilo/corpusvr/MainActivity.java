@@ -23,14 +23,24 @@ import org.rajawali3d.view.SurfaceView;
 public class MainActivity extends AppCompatActivity
 {
 	private static final String TAG = "MainActivity";
+
+	// Bundle keys
+	private static final String CAMERA_PERMISSION_KEY = "CAMERA_INDEX";
+	private static final String OPENCV_LOADED_KEY = "OPENCV_INDEX";
+
 	private static final int REQUEST_CAMERA_PERMISSION = 200;
+
+	// Android layout
 	private FrameLayout mFrame;
 	private MyJavaCameraView mJavaCameraView;
 	private MyRenderer mRenderer;
 	private SurfaceView mSurfaceView;
+
 	private HandTracking mHandTracking;
-	private boolean mOpenCVLoaded = false;
-	private boolean mCameraPermission = false;
+
+	private boolean mCameraPermission;
+	private boolean mOpenCVLoaded;
+
 	private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this)
 	{
 		@Override
@@ -39,10 +49,9 @@ public class MainActivity extends AppCompatActivity
 			switch (status)
 			{
 				case BaseLoaderCallback.SUCCESS:
+					mOpenCVLoaded = true;
 					if (mJavaCameraView != null)
-					{
 						mJavaCameraView.enableView();
-					}
 					break;
 				default:
 					super.onManagerConnected(status);
@@ -51,18 +60,38 @@ public class MainActivity extends AppCompatActivity
 	};
 
 	@Override
+	protected void onSaveInstanceState(Bundle outState)
+	{
+		outState.putBoolean(CAMERA_PERMISSION_KEY, mCameraPermission);
+		outState.putBoolean(OPENCV_LOADED_KEY, mOpenCVLoaded);
+		super.onSaveInstanceState(outState);
+	}
+
+	@Override
 	protected void onCreate(@Nullable Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
 
+		if (savedInstanceState != null)
+		{
+			mOpenCVLoaded = savedInstanceState.getBoolean(OPENCV_LOADED_KEY, false);
+			mCameraPermission = savedInstanceState.getBoolean(CAMERA_PERMISSION_KEY, false);
+		}
+		else
+		{
+			mOpenCVLoaded = false;
+			mCameraPermission = false;
+		}
+
 		// Check For Camera Permission
-		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)
+		if (!mCameraPermission && ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)
 			ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
 		else
 			mCameraPermission = true;
 
 		ActionBar actionBar = getSupportActionBar();
-		if (actionBar != null) actionBar.hide();
+		if (actionBar != null)
+			actionBar.setDisplayHomeAsUpEnabled(false);
 
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -77,8 +106,11 @@ public class MainActivity extends AppCompatActivity
 		// Create HandTracking Object
 		mHandTracking = new HandTracking();
 
+		// Create OpenGL Renderer
+		mRenderer = new MyRenderer(this, mHandTracking);
+
 		// Camera View
-		mJavaCameraView = new MyJavaCameraView(this, 99, mHandTracking);
+		mJavaCameraView = new MyJavaCameraView(this, 99, mHandTracking, mRenderer);
 		mJavaCameraView.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 		mJavaCameraView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
 		mFrame.addView(mJavaCameraView);
@@ -98,7 +130,6 @@ public class MainActivity extends AppCompatActivity
 		mSurfaceView.setFrameRate(60);
 		mFrame.addView(mSurfaceView);
 
-		mRenderer = new MyRenderer(this, mJavaCameraView, mHandTracking);
 		mSurfaceView.setSurfaceRenderer(mRenderer);
 	}
 
@@ -115,11 +146,12 @@ public class MainActivity extends AppCompatActivity
 										| View.SYSTEM_UI_FLAG_FULLSCREEN
 										| View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 
-		if (mCameraPermission)
+		if (mCameraPermission && !mOpenCVLoaded)
 		{
-			//OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
-			OpenCVLoader.initDebug();
-			mLoaderCallback.onManagerConnected(BaseLoaderCallback.SUCCESS);
+			if (OpenCVLoader.initDebug())
+				mLoaderCallback.onManagerConnected(BaseLoaderCallback.SUCCESS);
+			else
+				OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
 		}
 	}
 
@@ -127,13 +159,15 @@ public class MainActivity extends AppCompatActivity
 	protected void onPause()
 	{
 		super.onPause();
-		if (mJavaCameraView != null) mJavaCameraView.disableView();
+		if (mJavaCameraView != null)
+			mJavaCameraView.disableView();
 	}
 
 	@Override
 	protected void onDestroy()
 	{
-		if (mJavaCameraView != null) mJavaCameraView.disableView();
+		if (mJavaCameraView != null)
+			mJavaCameraView.disableView();
 		super.onDestroy();
 	}
 
@@ -150,7 +184,10 @@ public class MainActivity extends AppCompatActivity
 					if (grantResults[i] == PackageManager.PERMISSION_GRANTED)
 					{
 						mCameraPermission = true;
-						OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
+						if (OpenCVLoader.initDebug())
+							mLoaderCallback.onManagerConnected(BaseLoaderCallback.SUCCESS);
+						else
+							OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
 					}
 				}
 			}

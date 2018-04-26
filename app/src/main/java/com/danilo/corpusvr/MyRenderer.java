@@ -1,7 +1,6 @@
 package com.danilo.corpusvr;
 
 import android.content.Context;
-import android.opengl.Matrix;
 import android.util.Log;
 import android.view.MotionEvent;
 
@@ -14,49 +13,32 @@ import org.rajawali3d.math.Matrix4;
 import org.rajawali3d.primitives.Sphere;
 import org.rajawali3d.renderer.Renderer;
 
-public class MyRenderer extends Renderer
+public class MyRenderer extends Renderer implements CameraProjectionListener
 {
 	private static final String TAG = "MyRenderer";
-	private static final float NEAR = 0.1f;
-	private static final float FAR  = 100f;
-	private static final long MAX_BAD_TRACK_FRAMES = 5;
-	private MyJavaCameraView mJavaCameraView;
-	private Matrix4 mPose = null;
-	private Matrix4 mProjectionGL = null;
+
 	private Context mContext;
+
+	// Tracking information
+	private static final long MAX_BAD_TRACK_FRAMES = 5;
+	private HandTracking.HandStatus mHandStatus;
 	private HandTracking mHandTracking;
-	private HandTracking.HandStatus mHandStatus = null;
-	private DirectionalLight mDirectionalLight = null;
-	private Sphere mSphere = null;
 	private long mBadTrackFramesCount;
 	private double mAngle;
 
-	MyRenderer(Context context, MyJavaCameraView JavaCameraView, HandTracking Status)
+	// Matrices
+	private Matrix4 mModelMatrix;
+	private Matrix4 mProjectionMat;
+
+	// Scene objects
+	private DirectionalLight mDirectionalLight;
+	private Sphere mSphere;
+
+	MyRenderer(Context context, HandTracking Status)
 	{
 		super(context);
 		mContext = context;
-		mJavaCameraView = JavaCameraView;
 		mHandTracking = Status;
-	}
-
-	public float getAspectRatio()
-	{
-		return (float) getDefaultViewportWidth() / (float) getDefaultViewportHeight();
-	}
-
-	public Matrix4 getProjectionGL()
-	{
-		if (mProjectionGL == null)
-		{
-			float[] tmp = new float[16];
-			float fovX = mJavaCameraView.getFOVX();
-			float aspectR = getAspectRatio();
-			float right = (float) Math.tan(0.5f * fovX * Math.PI / 180.0f) * NEAR;
-			float top = right / aspectR;
-			Matrix.frustumM(tmp, 0, -right, right, -top, top, NEAR, FAR);
-			mProjectionGL = new Matrix4(tmp);
-		}
-		return mProjectionGL;
 	}
 
 	@Override
@@ -64,9 +46,13 @@ public class MyRenderer extends Renderer
 	{
 		setFrameRate(30);
 
-		getCurrentCamera().setProjectionMatrix(getProjectionGL());
+		//  http://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices/#an-introduction-to-matrices
+		//  getCurrentCamera().getModelMatrix().identity();
+		//  getCurrentCamera().getViewMatrix().identity();
+		if (mProjectionMat != null)
+			getCurrentCamera().setProjectionMatrix(mProjectionMat);
 
-		mPose = new Matrix4();
+		mModelMatrix = new Matrix4();
 
 		mDirectionalLight = new DirectionalLight(1.0f, 0.2f, -1.0f);
 		mDirectionalLight.setColor(1.0f, 1.0f, 1.0f);
@@ -96,7 +82,7 @@ public class MyRenderer extends Renderer
 
 		mSphere.setVisible(false);
 
-		mBadTrackFramesCount = 0;
+		mBadTrackFramesCount = MAX_BAD_TRACK_FRAMES;
 		mAngle = 0;
 	}
 
@@ -116,19 +102,19 @@ public class MyRenderer extends Renderer
 			if (!mSphere.isVisible())
 				mSphere.setVisible(true);
 
-			mPose.setAll(mHandStatus.mPose);
-			mPose.scale(0.05d, 0.05d, 0.05d);
-			mPose.rotate(1, 0, 0, mAngle);
+			mModelMatrix.setAll(mHandStatus.mPose);
+			mModelMatrix.scale(0.05d, 0.05d, 0.05d);
+			mModelMatrix.rotate(1, 0, 0, mAngle);
 
 			if (mAngle < 360)
 				mAngle += 2.2d;
 			else
 				mAngle = 0;
 
-//			Matrix.scaleM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, 0.05f, 0.05f, 0.05f);
-//			Matrix.rotateM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, mAngle, 1, 0, 0);
+			//  Matrix.scaleM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, 0.05f, 0.05f, 0.05f);
+			//  Matrix.rotateM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, mAngle, 1, 0, 0);
 
-			mSphere.calculateModelMatrix(mPose);
+			mSphere.calculateModelMatrix(mModelMatrix);
 		}
 		else if (mSphere.isVisible())
 			mSphere.setVisible(false);
@@ -145,5 +131,17 @@ public class MyRenderer extends Renderer
 	public void onTouchEvent(MotionEvent event)
 	{
 
+	}
+
+	@Override
+	public void onProjectionChanged(float[] projectionMat)
+	{
+		if (mProjectionMat == null)
+			mProjectionMat = new Matrix4(projectionMat);
+		else
+			mProjectionMat.setAll(projectionMat);
+
+		if (mSceneInitialized)
+			getCurrentCamera().setProjectionMatrix(mProjectionMat);
 	}
 }

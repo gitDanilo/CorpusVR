@@ -12,10 +12,7 @@ import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfInt4;
 import org.opencv.core.MatOfPoint;
-import org.opencv.core.MatOfPoint2f;
-import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
-import org.opencv.core.Point3;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
@@ -38,11 +35,12 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	private static final Scalar COLOR_BLUE = new Scalar(0, 0, 255);
 	private static final Scalar COLOR_YELLOW = new Scalar(255, 255, 0);
 
+	// Image filtering parameters
 	private static final int BLUR_SIZE = 5;
 	private static final int ELEMENT_SIZE = 4;
 	private static final double PI = 3.1415926535897932384626433832795d;
 
-	// Hand detection Parameters
+	// Hand detection conditions
 	private static final double MIN_ANGLE = 0;
 	private static final double MAX_ANGLE = 179;
 	private static final double MIN_INNER_ANGLE = 20;
@@ -50,43 +48,53 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	private static final double MIN_LENGTH = 10;
 	private static final double MAX_LENGTH = 80;
 
+	// Parameters to create the camera perspective matrix
 	private static final float NEAR = 0.1f;
-	private static final float FAR  = 100f;
-
+	private static final float FAR = 100f;
+	CameraProjectionListener mProjectionListener;
 	private HandTracking mHandTracking;
+	// Camera parameters
 	private int mScreenWidth = -1;
 	private int mScreenHeight = -1;
 	private float mFOVX = 0;
 	private float mFOVY = 0;
+	// Camera matrices
 	private MatOfDouble mProjectionCV;
 	private float[] mProjectionGL;
 	private float[] mProjectionGLInv;
 	private float[] mWorldPoint;
-	private float[] mViewMatrix = new float[]{1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, -4.0f, 1.0f};
+	private float[] mModelViewMatrix = new float[]{1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, -4.0f, 1.0f}; // default ModelViewMatrix from OpenGL Renderer
+
+	// Processed images
 	private Mat mRGBA;
 	private Mat mHSV;
 	private Mat mBinMat;
+
+	// Color filter
 	//	private Mat mMask = null;
 	//	private Mat mMask1 = null;
 	//	private Mat mMask2 = null;
-	private Mat mHierarchy;
 	private Scalar mMinHSV1;
 	private Scalar mMaxHSV1;
 	//	private Scalar mMinHSV2;
 	//	private Scalar mMaxHSV2;
+
+	// solvePNP parameters
+	//  private MatOfPoint mIntSceneCorners;
+	//  private Mat mSceneCorners;
+	//  private MatOfPoint2f mSceneCorners2D;
+	//  private MatOfPoint3f mReferenceCorners3D;
+	//  private MatOfDouble mDistCoeffs; // Distortion
+	//  private MatOfDouble mRVec;
+	//  private MatOfDouble mTVec;
+	//  private MatOfDouble mRotation;
+
+	// Detected object information
 	private List<MatOfPoint> mListOfContours;
-	//	private Moments mMoments;
-	private MatOfPoint mIntSceneCorners;
-	private Mat mSceneCorners;
-	private MatOfPoint2f mSceneCorners2D;
-	private MatOfPoint3f mReferenceCorners3D;
-	private MatOfDouble mDistCoeffs; // Distortion
-	private MatOfDouble mRVec;
-	private MatOfDouble mTVec;
-	private MatOfDouble mRotation;
-	private Mat mElementMat;
 	private int mIndex;
 	private int mLargestContour;
+	private Mat mHierarchy;
+	private Mat mElementMat;
 	private MatOfInt mHull;
 	private MatOfInt4 mDefects;
 	private Rect mObjBB;
@@ -96,6 +104,15 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	private Point mFarthestPt;
 	private HandTracking.HandStatus mHandStatus;
 
+	public MyJavaCameraView(Context context, int cameraId, HandTracking handTracking, CameraProjectionListener projectionListener)
+	{
+		super(context, cameraId);
+		setCvCameraViewListener(this);
+		enableFpsMeter();
+		mHandTracking = handTracking;
+		mProjectionListener = projectionListener;
+	}
+
 	private double innerAngle(double ax, double ay, double bx, double by, double cx, double cy)
 	{
 		double CAx = cx - ax;
@@ -104,21 +121,20 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		double CBy = cy - by;
 
 		// https://www.mathsisfun.com/algebra/trig-cosine-law.html (The Law of Cosines)
-		double A = Math.acos((CBx * CAx + CBy * CAy) / (Math.sqrt(CBx * CBx + CBy * CBy) * Math.sqrt(CAx * CAx + CAy * CAy)));	// (a² + b² − c²) / 2
-																																// ( (sqrt( (Ax - Bx)*(Ax - Bx) + (Ay - By)*(Ay - By) ))² + (sqrt( (Ax - Cx)*(Ax - Cx) + (Ay - Cy)*(Ay - Cy) ))² − (sqrt( (Bx - Cx)*(Bx - Cx) + (By - Cy)*(By - Cy) ))²) / 2
+		double A = Math.acos((CBx * CAx + CBy * CAy) / (Math.sqrt(CBx * CBx + CBy * CBy) * Math.sqrt(CAx * CAx + CAy * CAy)));    // (a² + b² − c²) / 2
+		// ( (sqrt( (Ax - Bx)*(Ax - Bx) + (Ay - By)*(Ay - By) ))² + (sqrt( (Ax - Cx)*(Ax - Cx) + (Ay - Cy)*(Ay - Cy) ))² − (sqrt( (Bx - Cx)*(Bx - Cx) + (By - Cy)*(By - Cy) ))²) / 2
 		return (A * 180 / PI);
 	}
 
 	// https://stackoverflow.com/questions/7692988/opengl-math-projecting-screen-space-to-world-space-coords
 	private float[] ScreenToWorld(Point screenPoint)
 	{
-		if (mWorldPoint == null)
-			mWorldPoint = new float[4];
+		if (mWorldPoint == null) mWorldPoint = new float[4];
 
 		if (mProjectionGLInv == null)
 		{
 			mProjectionGLInv = new float[16];
-			Matrix.multiplyMM(mProjectionGLInv, 0, mProjectionGL, 0, mViewMatrix , 0);
+			Matrix.multiplyMM(mProjectionGLInv, 0, mProjectionGL, 0, mModelViewMatrix, 0);
 			Matrix.invertM(mProjectionGLInv, 0, mProjectionGLInv, 0);
 		}
 
@@ -130,24 +146,6 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		Matrix.multiplyMV(mWorldPoint, 0, mProjectionGLInv, 0, mWorldPoint, 0);
 
 		return mWorldPoint;
-	}
-
-	public MyJavaCameraView(Context context, int cameraId, HandTracking handTracking)
-	{
-		super(context, cameraId);
-		setCvCameraViewListener(this);
-		enableFpsMeter();
-		mHandTracking = handTracking;
-	}
-
-	public float getFOVX()
-	{
-		return mCamera.getParameters().getHorizontalViewAngle();
-	}
-
-	public float getFOVY()
-	{
-		return mCamera.getParameters().getVerticalViewAngle();
 	}
 
 	public MatOfDouble getIntrinsicParam()
@@ -177,15 +175,14 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		return mProjectionCV;
 	}
 
-	private float[] getProjectionGL()
+	public float[] getProjectionMat()
 	{
 		if (mProjectionGL == null)
 		{
 			mProjectionGL = new float[16];
 
-			float fovX = getFOVX();
 			float aspectR = (float) mScreenWidth / (float) mScreenHeight;
-			float right = (float) Math.tan(0.5f * fovX * Math.PI / 180.0f) * NEAR;
+			float right = (float) Math.tan(0.5f * mFOVX * Math.PI / 180.0f) * NEAR;
 			float top = right / aspectR;
 			Matrix.frustumM(mProjectionGL, 0, -right, right, -top, top, NEAR, FAR);
 		}
@@ -197,25 +194,24 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	{
 		mScreenWidth = width;
 		mScreenHeight = height;
-		//mRGBA = new Mat(height, width, CvType.CV_8UC4);
 		mHSV = new Mat(height, width, CvType.CV_8UC3);
 		mBinMat = new Mat(height, width, CvType.CV_8UC1);
-		mFOVX = getFOVX();
-		mFOVY = getFOVY();
-		//		mMask      = new Mat(height, width, CvType.CV_8UC4);
-		//		mMask1     = new Mat(height, width, CvType.CV_8UC4);
-		//		mMask2     = new Mat(height, width, CvType.CV_8UC4);
+		mFOVX = mCamera.getParameters().getHorizontalViewAngle();
+		mFOVY = mCamera.getParameters().getVerticalViewAngle();
+		//  mMask  = new Mat(height, width, CvType.CV_8UC4);
+		//  mMask1 = new Mat(height, width, CvType.CV_8UC4);
+		//  mMask2 = new Mat(height, width, CvType.CV_8UC4);
 		mHierarchy = new Mat();
-		// 		Detection For Red Color
-		//		mMinHSV1 = new Scalar(0, 70, 50);
-		//		mMaxHSV1 = new Scalar(10, 255, 255);
-		//		mMinHSV2 = new Scalar(170, 70, 50);
-		//		mMaxHSV2 = new Scalar(180, 255, 255);
+		//  Detection For Red Color
+		//  mMinHSV1 = new Scalar(0, 70, 50);
+		//  mMaxHSV1 = new Scalar(10, 255, 255);
+		//  mMinHSV2 = new Scalar(170, 70, 50);
+		//  mMaxHSV2 = new Scalar(180, 255, 255);
 		mMinHSV1 = new Scalar(0, 30, 60);
 		mMaxHSV1 = new Scalar(20, 150, 255);
 		mHandStatus = new HandTracking.HandStatus();
-		mIntSceneCorners = new MatOfPoint();
-		mSceneCorners = new Mat(4, 1, CvType.CV_32FC2);
+		//  mIntSceneCorners = new MatOfPoint();
+		//  mSceneCorners = new Mat(4, 1, CvType.CV_32FC2);
 		mListOfContours = new ArrayList<>();
 		mHull = new MatOfInt();
 		mDefects = new MatOfInt4();
@@ -223,17 +219,17 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		mStartPt = new Point();
 		mEndPt = new Point();
 		mFarthestPt = new Point();
-		mSceneCorners2D = new MatOfPoint2f();
-		mReferenceCorners3D = new MatOfPoint3f();
-		mDistCoeffs = new MatOfDouble(0.0, 0.0, 0.0, 0.0); // Assume no distortion
-		mRVec = new MatOfDouble();
-		mTVec = new MatOfDouble();
-		mRotation = new MatOfDouble();
-		mReferenceCorners3D.fromArray(
-				new Point3(-5, -5, 0.0),
-				new Point3( 5, -5, 0.0),
-				new Point3( 5,  5, 0.0),
-				new Point3(-5,  5, 0.0));
+		//  mSceneCorners2D = new MatOfPoint2f();
+		//  mReferenceCorners3D = new MatOfPoint3f();
+		//  mDistCoeffs = new MatOfDouble(0.0, 0.0, 0.0, 0.0); // Assume no distortion
+		//  mRVec = new MatOfDouble();
+		//  mTVec = new MatOfDouble();
+		//  mRotation = new MatOfDouble();
+		//  mReferenceCorners3D.fromArray(
+		//  		new Point3(-5, -5, 0.0),
+		//  		new Point3( 5, -5, 0.0),
+		//  		new Point3( 5,  5, 0.0),
+		//  		new Point3(-5,  5, 0.0));
 
 		Size elementSize = new Size(2 * ELEMENT_SIZE + 1, 2 * ELEMENT_SIZE + 1);
 		Point elementPoint = new Point(ELEMENT_SIZE, ELEMENT_SIZE);
@@ -241,7 +237,7 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		mProjectionGL = null;
 		mProjectionGLInv = null;
 		mProjectionCV = null;
-		getProjectionGL();
+		mProjectionListener.onProjectionChanged(getProjectionMat());
 		getIntrinsicParam();
 	}
 
@@ -250,11 +246,11 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	{
 		mHSV.release();
 		mBinMat.release();
-		//		mMask.release();
-		//		mMask1.release();
-		//		mMask2.release();
+		//  mMask.release();
+		//  mMask1.release();
+		//  mMask2.release();
 		mHierarchy.release();
-		mSceneCorners.release();
+		//  mSceneCorners.release();
 		mListOfContours.clear();
 		mHull.release();
 		mDefects.release();
@@ -315,10 +311,7 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 						length = Math.sqrt(Math.pow(mStartPt.x - mFarthestPt.x, 2) + Math.pow(mStartPt.y - mFarthestPt.y, 2));
 						if (/*angle > MIN_ANGLE &&*/
 							/*angle < MAX_ANGLE &&*/
-							inAngle > MIN_INNER_ANGLE &&
-							inAngle < MAX_INNER_ANGLE &&
-							length > MIN_LENGTH / 100.0 * mObjBB.height &&
-							length < MAX_LENGTH / 100.0 * mObjBB.height)
+								inAngle > MIN_INNER_ANGLE && inAngle < MAX_INNER_ANGLE && length > MIN_LENGTH / 100.0 * mObjBB.height && length < MAX_LENGTH / 100.0 * mObjBB.height)
 						{
 							Imgproc.drawContours(mRGBA, mListOfContours, mLargestContour, COLOR_GREEN, 1);
 							Imgproc.line(mRGBA, mStartPt, mEndPt, COLOR_RED);
