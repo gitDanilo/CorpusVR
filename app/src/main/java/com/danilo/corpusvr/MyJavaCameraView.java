@@ -13,9 +13,7 @@ import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfInt4;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
-import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
-import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
@@ -40,18 +38,16 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	private static final int ELEMENT_SIZE = 4;
 	private static final double PI = 3.1415926535897932384626433832795d;
 
-	// Hand detection conditions
-	private static final double MIN_ANGLE = 0;
-	private static final double MAX_ANGLE = 179;
-	private static final double MIN_INNER_ANGLE = 20;
-	private static final double MAX_INNER_ANGLE = 130;
-	private static final double MIN_LENGTH = 10;
-	private static final double MAX_LENGTH = 80;
+	// Hand defect thresholds
+	private static final float MIN_FINGER_LENGTH = 60.0f; // min finger defect length
+	private static final float MAX_FINGER_LENGTH = 500.0f; // max finger defect length
+	private static final float MIN_INNER_ANGLE = 15.0f;
+	private static final float MAX_INNER_ANGLE = 115.0f;
 
 	// Parameters to create the camera perspective matrix
 	private static final float NEAR = 0.1f;
 	private static final float FAR = 100f;
-	CameraProjectionListener mProjectionListener;
+	private CameraProjectionListener mProjectionListener;
 	private HandTracking mHandTracking;
 	// Camera parameters
 	private int mScreenWidth = -1;
@@ -94,15 +90,9 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	private int mIndex;
 	private int mLargestContour;
 	private Mat mHierarchy;
-	private Mat mElementMat;
 	private MatOfInt mHull;
 	private MatOfInt4 mDefects;
-	private Rect mObjBB;
-	private Point mObjBBCenter;
-	private Point mStartPt;
-	private Point mEndPt;
-	private Point mFarthestPt;
-	private HandTracking.HandStatus mHandStatus;
+	private HandTracking.HandDefect mHandDefect;
 
 	public MyJavaCameraView(Context context, int cameraId, HandTracking handTracking, CameraProjectionListener projectionListener)
 	{
@@ -113,17 +103,16 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		mProjectionListener = projectionListener;
 	}
 
-	private double innerAngle(double ax, double ay, double bx, double by, double cx, double cy)
+	private double innerAngle(Point a, Point b, Point c)
 	{
-		double CAx = cx - ax;
-		double CAy = cy - ay;
-		double CBx = cx - bx;
-		double CBy = cy - by;
+		double CAx = c.x - a.x;
+		double CAy = c.y - a.y;
+		double CBx = c.x - b.x;
+		double CBy = c.y - b.y;
 
 		// https://www.mathsisfun.com/algebra/trig-cosine-law.html (The Law of Cosines)
 		double A = Math.acos((CBx * CAx + CBy * CAy) / (Math.sqrt(CBx * CBx + CBy * CBy) * Math.sqrt(CAx * CAx + CAy * CAy)));    // (a² + b² − c²) / 2
-		// ( (sqrt( (Ax - Bx)*(Ax - Bx) + (Ay - By)*(Ay - By) ))² + (sqrt( (Ax - Cx)*(Ax - Cx) + (Ay - Cy)*(Ay - Cy) ))² − (sqrt( (Bx - Cx)*(Bx - Cx) + (By - Cy)*(By - Cy) ))²) / 2
-		return (A * 180 / PI);
+		return (A * 180) / PI;
 	}
 
 	// https://stackoverflow.com/questions/7692988/opengl-math-projecting-screen-space-to-world-space-coords
@@ -209,16 +198,19 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		//  mMaxHSV2 = new Scalar(180, 255, 255);
 		mMinHSV1 = new Scalar(0, 30, 60);
 		mMaxHSV1 = new Scalar(20, 150, 255);
-		mHandStatus = new HandTracking.HandStatus();
 		//  mIntSceneCorners = new MatOfPoint();
 		//  mSceneCorners = new Mat(4, 1, CvType.CV_32FC2);
 		mListOfContours = new ArrayList<>();
 		mHull = new MatOfInt();
 		mDefects = new MatOfInt4();
-		mObjBBCenter = new Point();
-		mStartPt = new Point();
-		mEndPt = new Point();
-		mFarthestPt = new Point();
+//		mFitLineMat = new Mat(4, 1, CvType.CV_32FC1);
+//		mFitLine = new float[4];
+//		mObjBBCenter = new Point();
+//		mStartPt = new Point();
+//		mEndPt = new Point();
+//		mFarthestPt = new Point();
+//		mStartFitLine = new Point();
+//		mEndFitLine = new Point();
 		//  mSceneCorners2D = new MatOfPoint2f();
 		//  mReferenceCorners3D = new MatOfPoint3f();
 		//  mDistCoeffs = new MatOfDouble(0.0, 0.0, 0.0, 0.0); // Assume no distortion
@@ -231,9 +223,9 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		//  		new Point3( 5,  5, 0.0),
 		//  		new Point3(-5,  5, 0.0));
 
-		Size elementSize = new Size(2 * ELEMENT_SIZE + 1, 2 * ELEMENT_SIZE + 1);
-		Point elementPoint = new Point(ELEMENT_SIZE, ELEMENT_SIZE);
-		mElementMat = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, elementSize, elementPoint);
+		//  Size elementSize = new Size(2 * ELEMENT_SIZE + 1, 2 * ELEMENT_SIZE + 1);
+		//  Point elementPoint = new Point(ELEMENT_SIZE, ELEMENT_SIZE);
+		//  mElementMat = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, elementSize, elementPoint);
 		mProjectionGL = null;
 		mProjectionGLInv = null;
 		mProjectionCV = null;
@@ -261,8 +253,6 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame)
 	{
 		mRGBA = inputFrame.rgba();
-
-		mHandStatus.mRender = false;
 
 		Imgproc.cvtColor(mRGBA, mHSV, Imgproc.COLOR_RGB2HSV);
 		Core.inRange(mHSV, mMinHSV1, mMaxHSV1, mBinMat);
@@ -293,65 +283,35 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 			if (!mHull.empty())
 			{
 				Imgproc.convexityDefects(mListOfContours.get(mLargestContour), mHull, mDefects);
-				if (mDefects.rows() > 0)
+				if (mDefects.rows() >= HandTracking.MIN_HAND_DEFECTS)
 				{
-					mObjBB = Imgproc.boundingRect(mListOfContours.get(mLargestContour));
-					Imgproc.rectangle(mRGBA, mObjBB.tl(), mObjBB.br(), COLOR_GREEN, 1);
-					mObjBBCenter = new Point(mObjBB.x + mObjBB.width / 2, mObjBB.y + mObjBB.height / 2);
+					double angle;
 					int[] defectsList = mDefects.toArray();
-					double inAngle;
-					double length;
-					for (mIndex = 0; mIndex < defectsList.length; mIndex += 2)
+					for (mIndex = 0; mIndex < defectsList.length; ++mIndex)
 					{
-						mStartPt.set(mListOfContours.get(mLargestContour).get(defectsList[mIndex++], 0));
-						mEndPt.set(mListOfContours.get(mLargestContour).get(defectsList[mIndex++], 0));
-						mFarthestPt.set(mListOfContours.get(mLargestContour).get(defectsList[mIndex], 0));
-						//double angle = Math.atan2(mObjBBCenter.y - mStartPt.y, mObjBBCenter.x - mStartPt.x) * 180 / PI;
-						inAngle = innerAngle(mStartPt.x, mStartPt.y, mEndPt.x, mEndPt.y, mFarthestPt.x, mFarthestPt.y);
-						length = Math.sqrt(Math.pow(mStartPt.x - mFarthestPt.x, 2) + Math.pow(mStartPt.y - mFarthestPt.y, 2));
-						if (/*angle > MIN_ANGLE &&*/
-							/*angle < MAX_ANGLE &&*/
-								inAngle > MIN_INNER_ANGLE && inAngle < MAX_INNER_ANGLE && length > MIN_LENGTH / 100.0 * mObjBB.height && length < MAX_LENGTH / 100.0 * mObjBB.height)
+						mHandDefect = new HandTracking.HandDefect();
+						mHandDefect.startPoint.set(mListOfContours.get(mLargestContour).get(defectsList[mIndex++], 0));
+						mHandDefect.endPoint.set(mListOfContours.get(mLargestContour).get(defectsList[mIndex++], 0));
+						mHandDefect.farthestPoint.set(mListOfContours.get(mLargestContour).get(defectsList[mIndex++], 0));
+						mHandDefect.length = defectsList[mIndex] / 256.0f;
+						angle = innerAngle(mHandDefect.startPoint, mHandDefect.endPoint, mHandDefect.farthestPoint);
+						if (mHandDefect.length >= MIN_FINGER_LENGTH &&
+							mHandDefect.length <= MAX_FINGER_LENGTH &&
+							angle >= MIN_INNER_ANGLE &&
+							angle <= MAX_INNER_ANGLE)
 						{
-							Imgproc.drawContours(mRGBA, mListOfContours, mLargestContour, COLOR_GREEN, 1);
-							Imgproc.line(mRGBA, mStartPt, mEndPt, COLOR_RED);
-							Imgproc.line(mRGBA, mStartPt, mFarthestPt, COLOR_RED);
-							Imgproc.line(mRGBA, mEndPt, mFarthestPt, COLOR_RED);
-							Imgproc.circle(mRGBA, mStartPt, 5, COLOR_BLUE, 2);
-							Imgproc.circle(mRGBA, mEndPt, 5, COLOR_BLUE, 2);
-							Imgproc.circle(mRGBA, mFarthestPt, 5, COLOR_BLUE, 2);
+							if (!mHandTracking.addHandDefect(mHandDefect))
+								break;
 						}
 					}
-					Imgproc.circle(mRGBA, mObjBBCenter, 5, COLOR_YELLOW, 2);
-					ScreenToWorld(mObjBBCenter);
-
-					mHandStatus.mPose[0] = 1.0f;
-					mHandStatus.mPose[1] = 0;
-					mHandStatus.mPose[2] = 0;
-					mHandStatus.mPose[3] = 0;
-					mHandStatus.mPose[4] = 0;
-					mHandStatus.mPose[5] = 1.0f;
-					mHandStatus.mPose[6] = 0;
-					mHandStatus.mPose[7] = 0;
-					mHandStatus.mPose[8] = 0;
-					mHandStatus.mPose[9] = 0;
-					mHandStatus.mPose[10] = 1.0f;
-					mHandStatus.mPose[11] = 0;
-					mHandStatus.mPose[12] = mWorldPoint[0];
-					mHandStatus.mPose[13] = mWorldPoint[1];
-					mHandStatus.mPose[14] = mWorldPoint[2];
-					mHandStatus.mPose[15] = mWorldPoint[3];
-
-					mHandStatus.mRender = true;
+					Imgproc.drawContours(mRGBA, mListOfContours, mLargestContour, COLOR_GREEN, 1);
+					mHandTracking.calculateHandPose(mRGBA);
 				}
 			}
 			mListOfContours.get(mLargestContour).release();
 			mListOfContours.clear();
 		}
 
-		mHandTracking.setObjStatus(mHandStatus);
-
 		return mRGBA;
 	}
-
 }

@@ -20,8 +20,8 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	private Context mContext;
 
 	// Tracking information
-	private static final long MAX_BAD_TRACK_FRAMES = 5;
-	private HandTracking.HandStatus mHandStatus;
+	private static final long MAX_BAD_TRACK_FRAMES = 10;
+	private HandTracking.HandPose mHandPose;
 	private HandTracking mHandTracking;
 	private long mBadTrackFramesCount;
 	private double mAngle;
@@ -91,10 +91,10 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	{
 		super.onRender(ellapsedRealtime, deltaTime);
 
-		mHandStatus = mHandTracking.getObjStatus();
-		if (mHandStatus.mRender || mBadTrackFramesCount <= MAX_BAD_TRACK_FRAMES)
+		mHandPose = mHandTracking.getObjStatus();
+		if (mHandPose.render || mBadTrackFramesCount <= MAX_BAD_TRACK_FRAMES)
 		{
-			if (mHandStatus.mRender)
+			if (mHandPose.render)
 				mBadTrackFramesCount = 0;
 			else
 				++mBadTrackFramesCount;
@@ -102,7 +102,7 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 			if (!mSphere.isVisible())
 				mSphere.setVisible(true);
 
-			mModelMatrix.setAll(mHandStatus.mPose);
+			//mModelMatrix.setAll(mHandPose.mPose);
 			mModelMatrix.scale(0.05d, 0.05d, 0.05d);
 			mModelMatrix.rotate(1, 0, 0, mAngle);
 
