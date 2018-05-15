@@ -40,7 +40,7 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 
 	// Hand defect thresholds
 	private static final float MIN_FINGER_LENGTH = 60.0f; // min finger defect length
-	private static final float MAX_FINGER_LENGTH = 500.0f; // max finger defect length
+	private static final float MAX_FINGER_LENGTH = 450.0f; // max finger defect length
 	private static final float MIN_INNER_ANGLE = 15.0f;
 	private static final float MAX_INNER_ANGLE = 115.0f;
 

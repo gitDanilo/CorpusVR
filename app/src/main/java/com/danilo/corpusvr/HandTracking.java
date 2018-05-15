@@ -18,8 +18,8 @@ public class HandTracking
 	private static final String TAG = "HandTracking";
 	private static final float MAX_DISTANCE = 99999.0f;
 	private static final float DELTA_LENGTH = 0.7f;
-	private static final float MIN_FINGER_WIDTH = /*25.0f*/40.0f;
-	private static final float MAX_FINGER_WIDTH = /*60.0f*/200.0f;
+	private static final float MIN_FINGER_WIDTH = /*25.0f*/30.0f;
+	private static final float MAX_FINGER_WIDTH = /*60.0f*/130.0f;
 	public static final int MIN_HAND_DEFECTS = 4; // min 4 hand defects, one between each finger
 	public static final int MAX_HAND_DEFECTS = 5; // max number of palm points (create one exception)
 
@@ -227,12 +227,6 @@ public class HandTracking
 		{
 			start = new Point(0, 0);
 			angle = 0;
-		}
-
-		public FingerPose(Point start, float angle)
-		{
-			this.start = start;
-			this.angle = angle;
 		}
 	}
 
