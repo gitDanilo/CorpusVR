@@ -3,7 +3,6 @@ package com.danilo.corpusvr;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.graphics.PixelFormat;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -118,14 +117,14 @@ public class MainActivity extends AppCompatActivity
 		mSurfaceView.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 		mSurfaceView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
 
-		mSurfaceView.setZOrderMediaOverlay(true);
-		mSurfaceView.getHolder().setFormat(PixelFormat.TRANSPARENT);
-		mSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0);
+//		mSurfaceView.setZOrderMediaOverlay(true);
+//		mSurfaceView.getHolder().setFormat(PixelFormat.TRANSPARENT);
+//		mSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0);
 
 		mSurfaceView.setTransparent(true);
 		mSurfaceView.setRenderMode(ISurface.RENDERMODE_WHEN_DIRTY);
 		mSurfaceView.setAntiAliasingMode(ISurface.ANTI_ALIASING_CONFIG.MULTISAMPLING);
-		mSurfaceView.setFrameRate(60);
+		mSurfaceView.setFrameRate(30);
 		mFrame.addView(mSurfaceView);
 
 		mSurfaceView.setSurfaceRenderer(mRenderer);
@@ -144,12 +143,19 @@ public class MainActivity extends AppCompatActivity
 										| View.SYSTEM_UI_FLAG_FULLSCREEN
 										| View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 
-		if (mCameraPermission && !mOpenCVLoaded)
+		if (mCameraPermission)
 		{
-			if (OpenCVLoader.initDebug())
-				mLoaderCallback.onManagerConnected(BaseLoaderCallback.SUCCESS);
+			if (!mOpenCVLoaded)
+			{
+				if (OpenCVLoader.initDebug())
+					mLoaderCallback.onManagerConnected(BaseLoaderCallback.SUCCESS);
+				else
+					OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
+			}
 			else
-				OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
+			{
+				mLoaderCallback.onManagerConnected(BaseLoaderCallback.SUCCESS);
+			}
 		}
 	}
 

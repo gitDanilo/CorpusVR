@@ -121,10 +121,12 @@ public class HandTracking
 
 				// Translate mPalmCenter to midPoint
 				mPalmCenter.x += mMidPoint.x;
-				mPalmCenter.y -= mMidPoint.y; // Inverted y on OpenCV
-				//mPalmCenter.y = mPalmCenter.y - midPoint.y;
-				mPalmCenter.y *= -1; // Inverted y on OpenCV
 
+				// Inverted y on OpenCV
+				mPalmCenter.y -= mMidPoint.y;
+				mPalmCenter.y *= -1;
+
+				// Draw
 				Imgproc.circle(rgba, mPalmCenter, (int) mPalmRadius, COLOR_BLUE, 1);
 				Imgproc.circle(rgba, mPalmCenter, 4, COLOR_BLUE, 2);
 				for (int i = 0; i < mHandDefectsList.size(); ++i)
@@ -233,6 +235,7 @@ public class HandTracking
 	public static class HandPose
 	{
 		public boolean render;
+		public boolean right_model;
 		public Point start;
 		public float angle;
 		public float scale;
@@ -241,6 +244,7 @@ public class HandTracking
 		public HandPose()
 		{
 			render = false;
+			right_model = false;
 			start = new Point(0, 0);
 			angle = 0;
 			scale = 0;

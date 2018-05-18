@@ -1,14 +1,14 @@
 package com.danilo.corpusvr;
 
 import android.content.Context;
-import android.util.Log;
+import android.graphics.Color;
 import android.view.MotionEvent;
 
+import org.rajawali3d.Object3D;
 import org.rajawali3d.lights.DirectionalLight;
+import org.rajawali3d.loader.LoaderOBJ;
+import org.rajawali3d.loader.ParsingException;
 import org.rajawali3d.materials.Material;
-import org.rajawali3d.materials.methods.DiffuseMethod;
-import org.rajawali3d.materials.textures.ATexture;
-import org.rajawali3d.materials.textures.Texture;
 import org.rajawali3d.math.Matrix4;
 import org.rajawali3d.primitives.Sphere;
 import org.rajawali3d.renderer.Renderer;
@@ -33,6 +33,7 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	// Scene objects
 	private DirectionalLight mDirectionalLight;
 	private Sphere mSphere;
+	private Object3D myhand;
 
 	MyRenderer(Context context, HandTracking Status)
 	{
@@ -44,8 +45,6 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	@Override
 	protected void initScene()
 	{
-		setFrameRate(30);
-
 		//  http://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices/#an-introduction-to-matrices
 		//  getCurrentCamera().getModelMatrix().identity();
 		//  getCurrentCamera().getViewMatrix().identity();
@@ -54,33 +53,54 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 
 		mModelMatrix = new Matrix4();
 
-		mDirectionalLight = new DirectionalLight(1.0f, 0.2f, -1.0f);
+		mDirectionalLight = new DirectionalLight(4, 4, -4);
+//		mDirectionalLight = new DirectionalLight(1.0f, 0.2f, -1.0f);
 		mDirectionalLight.setColor(1.0f, 1.0f, 1.0f);
-		mDirectionalLight.setPower(2.0f);
+		mDirectionalLight.setPower(1.25f);
 		getCurrentScene().addLight(mDirectionalLight);
 
 		Material material = new Material();
-		material.enableLighting(true);
-		material.setDiffuseMethod(new DiffuseMethod.Lambert());
-		material.setColor(0);
+		material.enableLighting(false);
+		//material.setDiffuseMethod(new DiffuseMethod.Lambert());
+		material.setColor(Color.RED);
 
-		Texture earthTexture = new Texture("Earth", R.drawable.earthtruecolor_nasa_big);
-		try
-		{
-			material.addTexture(earthTexture);
+//		Texture earthTexture = new Texture("Earth", R.drawable.earthtruecolor_nasa_big);
+//		try
+//		{
+//			material.addTexture(earthTexture);
+//
+//		}
+//		catch (ATexture.TextureException error)
+//		{
+//			Log.d(TAG, "TEXTURE ERROR");
+//		}
 
-		}
-		catch (ATexture.TextureException error)
-		{
-			Log.d(TAG, "TEXTURE ERROR");
-		}
-
-		mSphere = new Sphere(1, 24, 24);
+		mSphere = new Sphere(0.02f, 24, 24);
+		//mSphere.setColor(0xFF00FF);
 		mSphere.setMaterial(material);
 
 		getCurrentScene().addChild(mSphere);
 
-		mSphere.setVisible(false);
+		mSphere.setPosition(0.155925d, 0.5703558d,0);
+
+//		mSphere.setVisible(false);
+
+		LoaderOBJ loaderOBJ = new LoaderOBJ(this, R.raw.myhand_obj);
+		try
+		{
+			loaderOBJ.parse();
+		}
+		catch (ParsingException e)
+		{
+			e.printStackTrace();
+		}
+		myhand = loaderOBJ.getParsedObject();
+//		myhand.setMaterial(material); Its possible to remove the loaded material and change for a new one: https://github.com/Rajawali/Rajawali/issues/2015
+
+		getCurrentScene().addChild(myhand);
+
+		myhand.setScale(14.0, 14.0, 14.0);
+		myhand.setRotX(-90);
 
 		mBadTrackFramesCount = MAX_BAD_TRACK_FRAMES;
 		mAngle = 0;
@@ -91,33 +111,33 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	{
 		super.onRender(ellapsedRealtime, deltaTime);
 
-		mHandPose = mHandTracking.getObjStatus();
-		if (mHandPose.render || mBadTrackFramesCount <= MAX_BAD_TRACK_FRAMES)
-		{
-			if (mHandPose.render)
-				mBadTrackFramesCount = 0;
-			else
-				++mBadTrackFramesCount;
-
-			if (!mSphere.isVisible())
-				mSphere.setVisible(true);
-
-			//mModelMatrix.setAll(mHandPose.mPose);
-			mModelMatrix.scale(0.05d, 0.05d, 0.05d);
-			mModelMatrix.rotate(1, 0, 0, mAngle);
-
-			if (mAngle < 360)
-				mAngle += 2.2d;
-			else
-				mAngle = 0;
-
-			//  Matrix.scaleM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, 0.05f, 0.05f, 0.05f);
-			//  Matrix.rotateM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, mAngle, 1, 0, 0);
-
-			mSphere.calculateModelMatrix(mModelMatrix);
-		}
-		else if (mSphere.isVisible())
-			mSphere.setVisible(false);
+//		mHandPose = mHandTracking.getObjStatus();
+//		if (mHandPose.render || mBadTrackFramesCount <= MAX_BAD_TRACK_FRAMES)
+//		{
+//			if (mHandPose.render)
+//				mBadTrackFramesCount = 0;
+//			else
+//				++mBadTrackFramesCount;
+//
+//			if (!mSphere.isVisible())
+//				mSphere.setVisible(true);
+//
+//			//mModelMatrix.setAll(mHandPose.mPose);
+//			mModelMatrix.scale(0.05d, 0.05d, 0.05d);
+//			mModelMatrix.rotate(1, 0, 0, mAngle);
+//
+//			if (mAngle < 360)
+//				mAngle += 2.2d;
+//			else
+//				mAngle = 0;
+//
+//			//  Matrix.scaleM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, 0.05f, 0.05f, 0.05f);
+//			//  Matrix.rotateM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, mAngle, 1, 0, 0);
+//
+//			mSphere.calculateModelMatrix(mModelMatrix);
+//		}
+//		else if (mSphere.isVisible())
+//			mSphere.setVisible(false);
 
 	}
 
