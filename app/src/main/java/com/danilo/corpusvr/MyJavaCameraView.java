@@ -115,28 +115,6 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		return (A * 180) / PI;
 	}
 
-	// https://stackoverflow.com/questions/7692988/opengl-math-projecting-screen-space-to-world-space-coords
-	private float[] ScreenToWorld(Point screenPoint)
-	{
-		if (mWorldPoint == null) mWorldPoint = new float[4];
-
-		if (mProjectionGLInv == null)
-		{
-			mProjectionGLInv = new float[16];
-			Matrix.multiplyMM(mProjectionGLInv, 0, mProjectionGL, 0, mModelViewMatrix, 0);
-			Matrix.invertM(mProjectionGLInv, 0, mProjectionGLInv, 0);
-		}
-
-		mWorldPoint[0] = (2.0f * ((float) (screenPoint.x) / (float) (mScreenWidth))) - 1.0f;
-		mWorldPoint[1] = 1.0f - (2.0f * ((float) (screenPoint.y) / (float) (mScreenHeight)));
-		mWorldPoint[2] = 2.0f * 0.5f/*Z*/ - 1.0f;
-		mWorldPoint[3] = 1.0f;
-
-		Matrix.multiplyMV(mWorldPoint, 0, mProjectionGLInv, 0, mWorldPoint, 0);
-
-		return mWorldPoint;
-	}
-
 	public MatOfDouble getIntrinsicParam()
 	{
 		if (mProjectionCV == null)
@@ -253,6 +231,10 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame)
 	{
 		mRGBA = inputFrame.rgba();
+
+//		Imgproc.circle(mRGBA, new Point(1275, 715), 4, COLOR_BLUE, 2);
+
+		mHandTracking.disableRendering();
 
 		Imgproc.cvtColor(mRGBA, mHSV, Imgproc.COLOR_RGB2HSV);
 		Core.inRange(mHSV, mMinHSV1, mMaxHSV1, mBinMat);

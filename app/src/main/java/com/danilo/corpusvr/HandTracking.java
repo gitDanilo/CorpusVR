@@ -4,6 +4,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
+import org.rajawali3d.math.MathUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +17,9 @@ import java.util.concurrent.Semaphore;
 public class HandTracking
 {
 	private static final String TAG = "HandTracking";
+
+	private static final double PI = 3.1415926535897932384626433832795d;
+
 	private static final float MAX_DISTANCE = 99999.0f;
 	private static final float DELTA_LENGTH = 0.7f;
 	private static final float MIN_FINGER_WIDTH = /*25.0f*/30.0f;
@@ -115,6 +119,8 @@ public class HandTracking
 				double angle = arcTang(mMidPoint, mPalmPoint);
 				mPalmRadius = mHandDefectsList.get(index).length * DELTA_LENGTH;
 
+//				Log.d(TAG, "Length: " + mHandDefectsList.get(index).length + " Palm Radius: " + mPalmRadius);
+
 				// Rotate mPalmCenter point by angle
 				mPalmCenter.x = -Math.sin(angle) * mPalmRadius;
 				mPalmCenter.y = Math.cos(angle) * mPalmRadius;
@@ -140,11 +146,14 @@ public class HandTracking
 				}
 
 				// Do shit
-//				mHandPoseTemp.render = false;
-//				mHandPoseTemp.angle = 0;
-//				mHandPoseTemp.scale = 0;
-//				mHandPoseTemp.start.x = 0;
-//				mHandPoseTemp.start.y = 0;
+				mHandPoseTemp.render = true;
+				mHandPoseTemp.angle = (float) ((arcTang(mPalmCenter, mMidPoint) * MathUtil.PRE_180_DIV_PI));
+				mHandPoseTemp.scale = (7.0f * mHandDefectsList.get(index).length) / 120.0f;
+//				mHandPoseTemp.start = mPalmCenter;
+
+				mHandPoseTemp.start.x = 1275;
+				mHandPoseTemp.start.y = 715;
+
 //				for (int i = 0; i < 5; ++i)
 //				{
 //					mHandPoseTemp.fingerPoses[i].start.x = 0;
@@ -153,22 +162,36 @@ public class HandTracking
 //				}
 
 				// Change the real HandPose object
-//				try
-//				{
-//					mSemaphore.acquire();
-//					mHandPose = mHandPoseTemp;
-//					mSemaphore.release();
-//				}
-//				catch (InterruptedException e)
-//				{
-//					e.printStackTrace();
-//				}
+				try
+				{
+					mSemaphore.acquire();
+					mHandPose = mHandPoseTemp;
+					mSemaphore.release();
+				}
+				catch (InterruptedException e)
+				{
+					e.printStackTrace();
+				}
 			}
 		}
 		mHandDefectsList.clear();
 	}
 
-	double arcTang(Point a, Point b)
+	public void disableRendering()
+	{
+		try
+		{
+			mSemaphore.acquire();
+			mHandPose.render = false;
+			mSemaphore.release();
+		}
+		catch (InterruptedException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	private double arcTang(Point a, Point b)
 	{
 		return Math.atan2(a.y - b.y, b.x - a.x);
 	}
