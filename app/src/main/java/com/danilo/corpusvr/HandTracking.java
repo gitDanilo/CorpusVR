@@ -75,19 +75,21 @@ public class HandTracking
 		}
 	}
 
-//	public void setObjStatus(HandPose Status)
-//	{
-//		try
-//		{
-//			mSemaphore.acquire();
-//			mHandPose = Status;
-//			mSemaphore.release();
-//		}
-//		catch (InterruptedException e)
-//		{
-//			e.printStackTrace();
-//		}
-//	}
+	public void updateHandPose()
+	{
+		// Change the real HandPose object
+		try
+		{
+			mSemaphore.acquire();
+			mHandPose.copyFrom(mHandPoseTemp);
+			mSemaphore.release();
+		}
+		catch (InterruptedException e)
+		{
+			e.printStackTrace();
+		}
+		mHandPoseTemp.render = false;
+	}
 
 	public boolean addHandDefect(HandDefect defect)
 	{
@@ -149,10 +151,7 @@ public class HandTracking
 				mHandPoseTemp.render = true;
 				mHandPoseTemp.angle = (float) ((arcTang(mPalmCenter, mMidPoint) * MathUtil.PRE_180_DIV_PI));
 				mHandPoseTemp.scale = (7.0f * mHandDefectsList.get(index).length) / 120.0f;
-//				mHandPoseTemp.start = mPalmCenter;
-
-				mHandPoseTemp.start.x = 1275;
-				mHandPoseTemp.start.y = 715;
+				mHandPoseTemp.start = mPalmCenter;
 
 //				for (int i = 0; i < 5; ++i)
 //				{
@@ -160,35 +159,9 @@ public class HandTracking
 //					mHandPoseTemp.fingerPoses[i].start.y = 0;
 //					mHandPoseTemp.fingerPoses[i].angle = 0;
 //				}
-
-				// Change the real HandPose object
-				try
-				{
-					mSemaphore.acquire();
-					mHandPose = mHandPoseTemp;
-					mSemaphore.release();
-				}
-				catch (InterruptedException e)
-				{
-					e.printStackTrace();
-				}
 			}
 		}
 		mHandDefectsList.clear();
-	}
-
-	public void disableRendering()
-	{
-		try
-		{
-			mSemaphore.acquire();
-			mHandPose.render = false;
-			mSemaphore.release();
-		}
-		catch (InterruptedException e)
-		{
-			e.printStackTrace();
-		}
 	}
 
 	private double arcTang(Point a, Point b)
@@ -243,10 +216,24 @@ public class HandTracking
 		return (float) (Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2)));
 	}
 
-	public static class FingerPose
+	public static class FingerPose implements Duplicable
 	{
 		public Point start;
 		public float angle;
+
+		@Override
+		public boolean copyFrom(Duplicable obj)
+		{
+			if (obj.getClass().equals(this.getClass()))
+			{
+				FingerPose tmp = (FingerPose) obj;
+				start.x = tmp.start.x;
+				start.y = tmp.start.y;
+				angle = tmp.angle;
+				return true;
+			}
+			return false;
+		}
 
 		public FingerPose()
 		{
@@ -255,7 +242,7 @@ public class HandTracking
 		}
 	}
 
-	public static class HandPose
+	public static class HandPose implements Duplicable
 	{
 		public boolean render;
 		public boolean right_model;
@@ -263,6 +250,23 @@ public class HandTracking
 		public float angle;
 		public float scale;
 		public FingerPose[] fingerPoses;
+
+		@Override
+		public boolean copyFrom(Duplicable obj)
+		{
+			if (obj.getClass().equals(this.getClass()))
+			{
+				HandPose tmp = (HandPose) obj;
+				render = tmp.render;
+				right_model = tmp.right_model;
+				start.x = tmp.start.x;
+				start.y = tmp.start.y;
+				angle = tmp.angle;
+				scale = tmp.scale;
+				return true;
+			}
+			return false;
+		}
 
 		public HandPose()
 		{
@@ -275,12 +279,30 @@ public class HandTracking
 		}
 	}
 
-	public static class HandDefect
+	public static class HandDefect implements Duplicable
 	{
 		public Point startPoint;
 		public Point endPoint;
 		public Point farthestPoint;
 		public float length;
+
+		@Override
+		public boolean copyFrom(Duplicable obj)
+		{
+			if (obj.getClass().equals(this.getClass()))
+			{
+				HandDefect tmp = (HandDefect) obj;
+				startPoint.x = tmp.startPoint.x;
+				startPoint.y = tmp.startPoint.y;
+				endPoint.x = tmp.endPoint.x;
+				endPoint.y = tmp.endPoint.y;
+				farthestPoint.x = tmp.farthestPoint.x;
+				farthestPoint.y = tmp.farthestPoint.y;
+				length = tmp.length;
+				return true;
+			}
+			return false;
+		}
 
 		public HandDefect()
 		{

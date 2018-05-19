@@ -207,7 +207,7 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		mProjectionGL = null;
 		mProjectionGLInv = null;
 		mProjectionCV = null;
-		mProjectionListener.onProjectionChanged(getProjectionMat());
+		mProjectionListener.onProjectionChanged(width, height, getProjectionMat());
 		getIntrinsicParam();
 	}
 
@@ -233,8 +233,6 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		mRGBA = inputFrame.rgba();
 
 //		Imgproc.circle(mRGBA, new Point(1275, 715), 4, COLOR_BLUE, 2);
-
-		mHandTracking.disableRendering();
 
 		Imgproc.cvtColor(mRGBA, mHSV, Imgproc.COLOR_RGB2HSV);
 		Core.inRange(mHSV, mMinHSV1, mMaxHSV1, mBinMat);
@@ -293,6 +291,8 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 			mListOfContours.get(mLargestContour).release();
 			mListOfContours.clear();
 		}
+
+		mHandTracking.updateHandPose();
 
 		return mRGBA;
 	}

@@ -32,11 +32,10 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	private double mAngle;
 
 	// Matrices
-	private Matrix4 mModelMatrix;
-	private Matrix4 mProjectionMat;
-	private float[] mProjectionGLInv;
-	private float[] mWorldPoint;
-	private float[] mModelViewMatrix = new float[]{1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, -4.0f, 1.0f}; // default ModelViewMatrix from OpenGL Renderer
+	private float[] mModelMatF;
+	private Matrix4 mProjMat;
+	private Matrix4  mMVPInvMat;
+	//private float[] mViewMatrix = new float[]{1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, -4.0f, 1.0f}; // default ViewMatrix from OpenGL Renderer
 
 	// Scene objects
 	private DirectionalLight mDirectionalLight;
@@ -44,24 +43,28 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	private Object3D myhand;
 
 	// https://stackoverflow.com/questions/7692988/opengl-math-projecting-screen-space-to-world-space-coords
-	private void ScreenToWorld(Point screenPoint)
+	// Converts the coordinates from OpenCV space to OpenGL's
+	private void ScreenToWorld(Point point)
 	{
-		if (mWorldPoint == null)
-			mWorldPoint = new float[4];
+		if (mScreenWidth == -1 || mScreenHeight == -1)
+			return;
 
-		if (mProjectionGLInv == null)
+		if (mMVPInvMat == null)
 		{
-			mProjectionGLInv = new float[16];
-			Matrix.multiplyMM(mProjectionGLInv, 0, mProjectionMat.getFloatValues(), 0, mModelViewMatrix, 0);
-			Matrix.invertM(mProjectionGLInv, 0, mProjectionGLInv, 0);
+			mMVPInvMat = new Matrix4(mProjMat);
+			mMVPInvMat.multiply(getCurrentCamera().getViewMatrix()).inverse();
+
+//			mMVPInvMat = new float[16];
+//			Matrix.multiplyMM(mMVPInvMat, 0, mProjMat.getFloatValues(), 0, getCurrentCamera().getViewMatrix().getFloatValues(), 0);
+//			Matrix.invertM(mMVPInvMat, 0, mMVPInvMat, 0);
 		}
 
-		mWorldPoint[0] = (2.0f * ((float) (screenPoint.x) / (float) (mScreenWidth))) - 1.0f;
-		mWorldPoint[1] = 1.0f - (2.0f * ((float) (screenPoint.y) / (float) (mScreenHeight)));
-		mWorldPoint[2] = /*2.0f * 0.5f*//*Z*//* - 1.0f*/0;
-		mWorldPoint[3] = 1.0f;
+		mModelMatF[12] = (2.0f * ((float) (point.x) / (float) (mScreenWidth))) - 1.0f;
+		mModelMatF[13] = 1.0f - (2.0f * ((float) (point.y) / (float) (mScreenHeight)));
+		mModelMatF[14] = /*2.0f * 0.5f*//*Z*//* - 1.0f*/0;
+		mModelMatF[15] = 1.0f;
 
-		Matrix.multiplyMV(mWorldPoint, 0, mProjectionGLInv, 0, mWorldPoint, 0);
+		Matrix.multiplyMV(mModelMatF, 12, mMVPInvMat.getFloatValues(), 0, mModelMatF, 12);
 	}
 
 	MyRenderer(Context context, HandTracking Status)
@@ -78,32 +81,30 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 		//  getCurrentCamera().getModelMatrix().identity();
 		//  getCurrentCamera().getViewMatrix().identity();
 
-		mScreenHeight = 720;
-		mScreenWidth = 1280;
+		if (mProjMat != null)
+			getCurrentCamera().setProjectionMatrix(mProjMat);
 
-		if (mProjectionMat != null)
-			getCurrentCamera().setProjectionMatrix(mProjectionMat);
+		mModelMatF = new float[16];
 
-		mModelMatrix = new Matrix4();
-
+		// Scene basic light
 		mDirectionalLight = new DirectionalLight(4, 4, -4);
 		mDirectionalLight.setColor(1.0f, 1.0f, 1.0f);
 		mDirectionalLight.setPower(1.25f);
 		getCurrentScene().addLight(mDirectionalLight);
 
+		// Debug object basic material (disable light so it looks 2D)
 		Material material = new Material();
 		material.enableLighting(false);
 		//material.setDiffuseMethod(new DiffuseMethod.Lambert());
 		material.setColor(Color.RED);
 
-		mSphere = new Sphere(0.02f, 24, 24);
-		mSphere.setMaterial(material);
+		// Debug object
+		//mSphere = new Sphere(0.02f, 24, 24);
+		//mSphere.setMaterial(material);
+		//getCurrentScene().addChild(mSphere);
+		//mSphere.setVisible(true);
 
-		getCurrentScene().addChild(mSphere);
-
-//		mSphere.setPosition(0.155925d, 0.5703558d,0);
-//		mSphere.setVisible(false);
-
+		// Load OBJ and MTL files
 		LoaderOBJ loaderOBJ = new LoaderOBJ(this, R.raw.myhand_obj);
 		try
 		{
@@ -114,14 +115,10 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 			e.printStackTrace();
 		}
 		myhand = loaderOBJ.getParsedObject();
-//		myhand.setMaterial(material); Its possible to remove the loaded material and change for a new one: https://github.com/Rajawali/Rajawali/issues/2015
+		getCurrentScene().addChild(myhand);
+		myhand.setVisible(true);
 
-		//getCurrentScene().addChild(myhand);
-
-		//myhand.setVisible(false);
-		//myhand.setScale(14);
-		//myhand.setScale(14.0, 14.0, 14.0);
-		//myhand.setRotX(-90);
+		//	myhand.setMaterial(material); Its possible to remove the loaded material and change for a new one: https://github.com/Rajawali/Rajawali/issues/2015
 
 		mBadTrackFramesCount = MAX_BAD_TRACK_FRAMES;
 		mAngle = 0;
@@ -131,33 +128,6 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	protected void onRender(long ellapsedRealtime, double deltaTime)
 	{
 		super.onRender(ellapsedRealtime, deltaTime);
-
-		ScreenToWorld(new Point(1280, 720));
-
-		mSphere.setPosition(mWorldPoint[0] / mWorldPoint[3], mWorldPoint[1] / mWorldPoint[3], mWorldPoint[2] / mWorldPoint[3]);
-
-//		float mPose[] = new float[16];
-//
-//		mPose[0] = 1.0f;
-//		mPose[1] = 0;
-//		mPose[2] = 0;
-//		mPose[3] = 0;
-//		mPose[4] = 0;
-//		mPose[5] = 1.0f;
-//		mPose[6] = 0;
-//		mPose[7] = 0;
-//		mPose[8] = 0;
-//		mPose[9] = 0;
-//		mPose[10] = 1.0f;
-//		mPose[11] = 0;
-//		mPose[12] = mWorldPoint[0];
-//		mPose[13] = mWorldPoint[1];
-//		mPose[14] = mWorldPoint[2];
-//		mPose[15] = mWorldPoint[3];
-//
-//		mModelMatrix.setAll(mPose);
-//		mSphere.calculateModelMatrix(mModelMatrix);
-
 
 //		mHandPose = mHandTracking.getObjStatus();
 //		if (mHandPose.render || mBadTrackFramesCount < MAX_BAD_TRACK_FRAMES)
@@ -169,50 +139,26 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 //
 //			if (!myhand.isVisible())
 //				myhand.setVisible(true);
-//
-//
-//			ScreenToWorld(mHandPose.start);
-//
-//			float mPose[] = new float[16];
-//
-//			mPose[0] = 1.0f;
-//			mPose[1] = 0;
-//			mPose[2] = 0;
-//			mPose[3] = 0;
-//			mPose[4] = 0;
-//			mPose[5] = 1.0f;
-//			mPose[6] = 0;
-//			mPose[7] = 0;
-//			mPose[8] = 0;
-//			mPose[9] = 0;
-//			mPose[10] = 1.0f;
-//			mPose[11] = 0;
-//			mPose[12] = mWorldPoint[0];
-//			mPose[13] = mWorldPoint[1];
-//			mPose[14] = mWorldPoint[2];
-//			mPose[15] = mWorldPoint[3];
-//
-//			mModelMatrix.setAll(mPose);
-//
-//			myhand.calculateModelMatrix(mModelMatrix);
 
-			//myhand.rotateAround(Vector3.Z, (mHandPose.angle * - 1.0d) + 106.0d, false);
-			//myhand.setPosition(mPoint.x, mPoint.y, 0);
-			//myhand.setScale(mHandPose.scale);
+			// Generate Model Matrix of the hand
+			Matrix.setIdentityM(mModelMatF, 0);
+			//ScreenToWorld(mHandPose.start); // Translation
+			ScreenToWorld(new Point(1280, 720)); // Translation
+			//Matrix.rotateM(mModelMatF, 0, mHandPose.angle, 1, 0, 0); // Rotation
+			//Matrix.scaleM(mModelMatF, 0, 14, 14, 14); // Scale
 
-			//mModelMatrix.setAll(mHandPose.mPose);
-			//mModelMatrix.scale(0.05d, 0.05d, 0.05d);
-			//mModelMatrix.rotate(1, 0, 0, mAngle);
+		myhand.setPosition(mModelMatF[12] / mModelMatF[15], mModelMatF[13] / mModelMatF[15], mModelMatF[14] / mModelMatF[15]);
+		myhand.setScale(1 / mModelMatF[15]);
+		//myhand.getModelMatrix().setAll(mModelMatF);
+		//myhand.setPosition(0.9999999893398694,-1.00000080861669,-1.7418392417312134E-6);
 
-//			if (mAngle < 360)
-//				mAngle += 2.2d;
-//			else
-//				mAngle = 0;
+		//myhand.getChildAt(0).getmode
+//		for (int i = 0, j = myhand.getNumChildren(); i < j; ++i)
+//		{
+//			myhand.getChildAt(i).getModelMatrix().setAll(mModelMatF);
+//		}
+//		myhand.getModelMatrix().setAll(mModelMatF);
 
-			//  Matrix.scaleM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, 0.05f, 0.05f, 0.05f);
-			//  Matrix.rotateM(mHandStatus.mPose, 0, mHandStatus.mPose, 0, mAngle, 1, 0, 0);
-
-			//myhand.calculateModelMatrix(mModelMatrix);
 //		}
 //		else if (myhand.isVisible())
 //			myhand.setVisible(false);
@@ -232,14 +178,19 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	}
 
 	@Override
-	public void onProjectionChanged(float[] projectionMat)
+	public void onProjectionChanged(int width, int height, float[] projectionMat)
 	{
-		if (mProjectionMat == null)
-			mProjectionMat = new Matrix4(projectionMat);
+		mScreenWidth = width;
+		mScreenHeight = height;
+
+		mMVPInvMat = null;
+
+		if (mProjMat == null)
+			mProjMat = new Matrix4(projectionMat);
 		else
-			mProjectionMat.setAll(projectionMat);
+			mProjMat.setAll(projectionMat);
 
 		if (mSceneInitialized)
-			getCurrentCamera().setProjectionMatrix(mProjectionMat);
+			getCurrentCamera().setProjectionMatrix(mProjMat);
 	}
 }

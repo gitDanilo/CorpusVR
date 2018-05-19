@@ -2,5 +2,5 @@ package com.danilo.corpusvr;
 
 public interface CameraProjectionListener
 {
-	void onProjectionChanged(float[] projectionMat);
+	void onProjectionChanged(int width, int height, float[] projectionMat);
 }
