@@ -18,7 +18,7 @@ public class HandTracking
 {
 	private static final String TAG = "HandTracking";
 
-	private static final double PI = 3.1415926535897932384626433832795d;
+	private static final float DELTA_SCALE = 0.016f;
 
 	private static final float MAX_DISTANCE = 99999.0f;
 	private static final float DELTA_LENGTH = 0.7f;
@@ -121,7 +121,7 @@ public class HandTracking
 				double angle = arcTang(mMidPoint, mPalmPoint);
 				mPalmRadius = mHandDefectsList.get(index).length * DELTA_LENGTH;
 
-//				Log.d(TAG, "Length: " + mHandDefectsList.get(index).length + " Palm Radius: " + mPalmRadius);
+				//Log.d(TAG, "Length: " + mHandDefectsList.get(index).length + " Palm Radius: " + mPalmRadius);
 
 				// Rotate mPalmCenter point by angle
 				mPalmCenter.x = -Math.sin(angle) * mPalmRadius;
@@ -149,8 +149,8 @@ public class HandTracking
 
 				// Do shit
 				mHandPoseTemp.render = true;
-				mHandPoseTemp.angle = (float) ((arcTang(mPalmCenter, mMidPoint) * MathUtil.PRE_180_DIV_PI));
-				mHandPoseTemp.scale = (7.0f * mHandDefectsList.get(index).length) / 120.0f;
+				mHandPoseTemp.angle = (float) (arcTang(mPalmCenter, mMidPoint/*mHandDefectsList.get(index).farthestPoint*/) * MathUtil.PRE_180_DIV_PI);
+				mHandPoseTemp.scale = mHandDefectsList.get(index).length * DELTA_SCALE;
 				mHandPoseTemp.start = mPalmCenter;
 
 //				for (int i = 0; i < 5; ++i)

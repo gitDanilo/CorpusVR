@@ -25,7 +25,7 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	private int mScreenHeight = -1;
 
 	// Tracking information
-	private static final long MAX_BAD_TRACK_FRAMES = 10;
+	private static final long MAX_BAD_TRACK_FRAMES = 5;
 	private HandTracking.HandPose mHandPose;
 	private HandTracking mHandTracking;
 	private long mBadTrackFramesCount;
@@ -129,39 +129,34 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	{
 		super.onRender(ellapsedRealtime, deltaTime);
 
-//		mHandPose = mHandTracking.getObjStatus();
-//		if (mHandPose.render || mBadTrackFramesCount < MAX_BAD_TRACK_FRAMES)
-//		{
-//			if (mHandPose.render)
-//				mBadTrackFramesCount = 0;
-//			else
-//				++mBadTrackFramesCount;
-//
-//			if (!myhand.isVisible())
-//				myhand.setVisible(true);
+		mHandPose = mHandTracking.getObjStatus();
+		if (mHandPose.render || mBadTrackFramesCount < MAX_BAD_TRACK_FRAMES)
+		{
+			if (mHandPose.render)
+				mBadTrackFramesCount = 0;
+			else
+				++mBadTrackFramesCount;
+
+			if (!myhand.isVisible())
+				myhand.setVisible(true);
 
 			// Generate Model Matrix of the hand
 			Matrix.setIdentityM(mModelMatF, 0);
-			//ScreenToWorld(mHandPose.start); // Translation
-			ScreenToWorld(new Point(1280, 720)); // Translation
-			//Matrix.rotateM(mModelMatF, 0, mHandPose.angle, 1, 0, 0); // Rotation
-			//Matrix.scaleM(mModelMatF, 0, 14, 14, 14); // Scale
+			ScreenToWorld(mHandPose.start); // Translation
+			Matrix.rotateM(mModelMatF, 0, mHandPose.angle, 0, 0, 1); // Rotation
+			Matrix.scaleM(mModelMatF, 0, mHandPose.scale, mHandPose.scale, mHandPose.scale); // Scale
 
-		myhand.setPosition(mModelMatF[12] / mModelMatF[15], mModelMatF[13] / mModelMatF[15], mModelMatF[14] / mModelMatF[15]);
-		myhand.setScale(1 / mModelMatF[15]);
-		//myhand.getModelMatrix().setAll(mModelMatF);
-		//myhand.setPosition(0.9999999893398694,-1.00000080861669,-1.7418392417312134E-6);
+			//myhand.setPosition(mModelMatF[12] / mModelMatF[15], mModelMatF[13] / mModelMatF[15], mModelMatF[14] / mModelMatF[15]);
+			//myhand.setScale(1 / mModelMatF[15]);
 
-		//myhand.getChildAt(0).getmode
-//		for (int i = 0, j = myhand.getNumChildren(); i < j; ++i)
-//		{
-//			myhand.getChildAt(i).getModelMatrix().setAll(mModelMatF);
-//		}
-//		myhand.getModelMatrix().setAll(mModelMatF);
+			for (int i = 0, j = myhand.getNumChildren(); i < j; ++i)
+			{
+				myhand.getChildAt(i).getModelMatrix().setAll(mModelMatF);
+			}
 
-//		}
-//		else if (myhand.isVisible())
-//			myhand.setVisible(false);
+		}
+		else if (myhand.isVisible())
+			myhand.setVisible(false);
 
 	}
 
