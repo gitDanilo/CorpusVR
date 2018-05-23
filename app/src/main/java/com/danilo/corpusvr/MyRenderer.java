@@ -165,8 +165,6 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 
 			float tmp[] = new float[4];
 			float tmp1[] = new float[16];
-			float tmp2[] = new float[16];
-			float tmp3[] = new float[16];
 			float transf[] = new float[16];
 
 //			float test[] = new float[16];
@@ -192,40 +190,34 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 			{
 				if (mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.022") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.016"))
 				{
-					//mLeftHandModel.setVisible(false);
-					Matrix.setIdentityM(transf, 0);
-
 					// Get current object coordinate
 					tmp[0] = REF_FINGER_PTS[0][0];
 					tmp[1] = REF_FINGER_PTS[0][1];
-					tmp[2] = /*0.007f*/0;
+					tmp[2] = 0;
 					tmp[3] = 1;
 					Matrix.multiplyMV(tmp, 0, mModelMatF, 0, tmp, 0);
 
-					//mSphere.setPosition(tmp3[0], tmp3[1], tmp3[2]);
-					//mSphere.setScale(0.06);
-
 					// Translate to origin
+					Matrix.setIdentityM(transf, 0);
+					transf[12] = -tmp[0];
+					transf[13] = -tmp[1];
+					transf[14] = -tmp[2];
+					transf[15] = tmp[3];
+
+					// Transformation on the origin
 					Matrix.setIdentityM(tmp1, 0);
-					tmp1[12] = -tmp[0];
-					tmp1[13] = -tmp[1];
-					tmp1[14] = -tmp[2];
+					Matrix.setRotateM(tmp1, 0, 40, 0, 0, 1);
+					Matrix.multiplyMM(transf, 0, tmp1, 0, transf, 0);
+
+					// Translate back to the original position
+					Matrix.setIdentityM(tmp1, 0);
+					tmp1[12] = tmp[0];
+					tmp1[13] = tmp[1];
+					tmp1[14] = tmp[2];
 					tmp1[15] = tmp[3];
 					Matrix.multiplyMM(transf, 0, tmp1, 0, transf, 0);
 
-					// Transformation on the origin
-					Matrix.setIdentityM(tmp2, 0);
-					Matrix.setRotateM(tmp2, 0, 20, 0, 0, 1);
-					Matrix.multiplyMM(transf, 0, tmp2, 0, transf, 0);
-
-					// Translate back to the original position
-					Matrix.setIdentityM(tmp3, 0);
-					tmp3[12] = tmp[0];
-					tmp3[13] = tmp[1];
-					tmp3[14] = tmp[2];
-					tmp3[15] = tmp[3];
-					Matrix.multiplyMM(transf, 0, tmp3, 0, transf, 0);
-
+					// Apply the parent transformation
 					Matrix.multiplyMM(transf, 0, transf, 0, mModelMatF, 0);
 
 					mLeftHandModel.getChildAt(i).getModelMatrix().setAll(transf);
@@ -233,7 +225,6 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 				}
 				else
 					mLeftHandModel.getChildAt(i).getModelMatrix().setAll(mModelMatF);
-					//mLeftHandModel.getChildAt(i).setVisible(false);
 			}
 
 		//}
