@@ -1,9 +1,7 @@
 package com.danilo.corpusvr;
 
-import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
-import org.opencv.imgproc.Imgproc;
 import org.rajawali3d.math.MathUtil;
 
 import java.util.ArrayList;
@@ -102,7 +100,7 @@ public class HandTracking
 		return true;
 	}
 
-	public void calculateHandPose(Mat rgba)
+	public void calculateHandPose()
 	{
 		int size = mHandDefectsList.size();
 		if (size >= MIN_HAND_DEFECTS && size <= MAX_HAND_DEFECTS)
@@ -135,17 +133,17 @@ public class HandTracking
 				mPalmCenter.y *= -1;
 
 				// Draw
-				Imgproc.circle(rgba, mPalmCenter, (int) mPalmRadius, COLOR_BLUE, 1);
-				Imgproc.circle(rgba, mPalmCenter, 4, COLOR_BLUE, 2);
-				for (int i = 0; i < mHandDefectsList.size(); ++i)
-				{
-					Imgproc.circle(rgba, mHandDefectsList.get(i).startPoint, 4, COLOR_BLUE, 2);
-					Imgproc.circle(rgba, mHandDefectsList.get(i).endPoint, 4, COLOR_GREEN, 2);
-					Imgproc.circle(rgba, mHandDefectsList.get(i).farthestPoint, 4, COLOR_RED, 2);
-					Imgproc.line(rgba, mHandDefectsList.get(i).startPoint, mHandDefectsList.get(i).endPoint, COLOR_PINK, 1);
-					Imgproc.line(rgba, mHandDefectsList.get(i).farthestPoint, mHandDefectsList.get(i).startPoint, COLOR_PINK, 1);
-					Imgproc.line(rgba, mHandDefectsList.get(i).farthestPoint, mHandDefectsList.get(i).endPoint, COLOR_PINK, 1);
-				}
+//				Imgproc.circle(rgba, mPalmCenter, (int) mPalmRadius, COLOR_BLUE, 1);
+//				Imgproc.circle(rgba, mPalmCenter, 4, COLOR_BLUE, 2);
+//				for (int i = 0; i < mHandDefectsList.size(); ++i)
+//				{
+//					Imgproc.circle(rgba, mHandDefectsList.get(i).startPoint, 4, COLOR_BLUE, 2);
+//					Imgproc.circle(rgba, mHandDefectsList.get(i).endPoint, 4, COLOR_GREEN, 2);
+//					Imgproc.circle(rgba, mHandDefectsList.get(i).farthestPoint, 4, COLOR_RED, 2);
+//					Imgproc.line(rgba, mHandDefectsList.get(i).startPoint, mHandDefectsList.get(i).endPoint, COLOR_PINK, 1);
+//					Imgproc.line(rgba, mHandDefectsList.get(i).farthestPoint, mHandDefectsList.get(i).startPoint, COLOR_PINK, 1);
+//					Imgproc.line(rgba, mHandDefectsList.get(i).farthestPoint, mHandDefectsList.get(i).endPoint, COLOR_PINK, 1);
+//				}
 
 				// Do shit
 				mHandPoseTemp.render = true;

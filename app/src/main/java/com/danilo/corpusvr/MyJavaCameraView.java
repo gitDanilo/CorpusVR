@@ -285,7 +285,7 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 						}
 					}
 					Imgproc.drawContours(mRGBA, mListOfContours, mLargestContour, COLOR_GREEN, 1);
-					mHandTracking.calculateHandPose(mRGBA);
+					mHandTracking.calculateHandPose();
 				}
 			}
 			mListOfContours.get(mLargestContour).release();
