@@ -1,16 +1,12 @@
 package com.danilo.corpusvr;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.opengl.Matrix;
 import android.view.MotionEvent;
 
 import org.opencv.core.Point;
 import org.rajawali3d.Object3D;
 import org.rajawali3d.lights.DirectionalLight;
-import org.rajawali3d.loader.LoaderOBJ;
-import org.rajawali3d.loader.ParsingException;
-import org.rajawali3d.materials.Material;
 import org.rajawali3d.math.Matrix4;
 import org.rajawali3d.primitives.Sphere;
 import org.rajawali3d.renderer.Renderer;
@@ -108,30 +104,30 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 		getCurrentScene().addLight(mDirectionalLight);
 
 		// Debug object basic material (disable light so it looks 2D)
-		Material material = new Material();
-		material.enableLighting(false);
+//		Material material = new Material();
+//		material.enableLighting(false);
 		//material.setDiffuseMethod(new DiffuseMethod.Lambert());
-		material.setColor(Color.RED);
+//		material.setColor(Color.RED);
 
 		// Debug object
-		mSphere = new Sphere(0.02f, 24, 24);
-		mSphere.setMaterial(material);
-		getCurrentScene().addChild(mSphere);
-		mSphere.setVisible(true);
+//		mSphere = new Sphere(0.02f, 24, 24);
+//		mSphere.setMaterial(material);
+//		getCurrentScene().addChild(mSphere);
+//		mSphere.setVisible(true);
 
 		// Load OBJ and MTL files
-		LoaderOBJ loaderOBJ = new LoaderOBJ(this, R.raw.lefthand_obj);
-		try
-		{
-			loaderOBJ.parse();
-		}
-		catch (ParsingException e)
-		{
-			e.printStackTrace();
-		}
-		mLeftHandModel = loaderOBJ.getParsedObject();
-		getCurrentScene().addChild(mLeftHandModel);
-		mLeftHandModel.setVisible(true);
+//		LoaderOBJ loaderOBJ = new LoaderOBJ(this, R.raw.lefthand_obj);
+//		try
+//		{
+//			loaderOBJ.parse();
+//		}
+//		catch (ParsingException e)
+//		{
+//			e.printStackTrace();
+//		}
+//		mLeftHandModel = loaderOBJ.getParsedObject();
+//		getCurrentScene().addChild(mLeftHandModel);
+//		mLeftHandModel.setVisible(true);
 
 		//	myhand.setMaterial(material); Its possible to remove the loaded material and change for a new one: https://github.com/Rajawali/Rajawali/issues/2015
 
@@ -151,83 +147,65 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 //				mBadTrackFramesCount = 0;
 //			else
 //				++mBadTrackFramesCount;
-
+//
 //			if (!myhand.isVisible())
 //				myhand.setVisible(true);
-
-			// Generate Model Matrix of the hand
-			Matrix.setIdentityM(mModelMatF, 0);
-			ScreenToWorld(/*mHandPose.start*/new Point(640,360)); // Translation
-			Matrix.rotateM(mModelMatF, 0, /*mHandPose.angle*/170, 0, 0, 1); // Rotation
-			Matrix.scaleM(mModelMatF, 0, /*mHandPose.scale*/0.3f, /*mHandPose.scale*/0.3f, /*mHandPose.scale*/0.3f); // Scale
-
-			// Generate Test Model Matrix
-
-			float tmp[] = new float[4];
-			float tmp1[] = new float[16];
-			float transf[] = new float[16];
-
-//			float test[] = new float[16];
-//			test[12] = REF_FINGER_PTS[1][0];
-//			test[13] = REF_FINGER_PTS[1][1];
-//			test[14] = /*0.007f*/0;
-//			test[15] = 1;
-			//			Matrix.setIdentityM(test, 0);
-			//			Matrix.rotateM(mModelMatTest, 0, 10, 0, 0, 1); // Rotation
-//			Matrix.multiplyMV(test, 12, mModelMatF, 0, test, 12);
-//			System.arraycopy(mModelMatF, 0, test, 0, 12);
-//			Matrix.rotateM(test, 0, 20, 0, 0, 1);
-			//			Matrix.multiplyMM(test, 0, mModelMatF, 0, mModelMatTest, 0);
-//			mSphere.setPosition(test[0] / test[3], test[1] / test[3], test[2] / test[3]);
-//			mSphere.setScale(0.25 / test[3]);
-
-//			myhand.setPosition(mModelMatF[12] / mModelMatF[15], mModelMatF[13] / mModelMatF[15], mModelMatF[14] / mModelMatF[15]);
-//			myhand.setScale(mHandPose.scale / mModelMatF[15]);
-//			myhand.setRotation(0, 0, -1, mHandPose.angle);
-
-			// Palm
-			for (int i = 0, j = mLeftHandModel.getNumChildren(); i < j; ++i)
-			{
-				if (mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.022") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.016"))
-				{
-					// Get current object coordinate
-					tmp[0] = REF_FINGER_PTS[0][0];
-					tmp[1] = REF_FINGER_PTS[0][1];
-					tmp[2] = 0;
-					tmp[3] = 1;
-					Matrix.multiplyMV(tmp, 0, mModelMatF, 0, tmp, 0);
-
-					// Translate to origin
-					Matrix.setIdentityM(transf, 0);
-					transf[12] = -tmp[0];
-					transf[13] = -tmp[1];
-					transf[14] = -tmp[2];
-					transf[15] = tmp[3];
-
-					// Transformation on the origin
-					Matrix.setIdentityM(tmp1, 0);
-					Matrix.setRotateM(tmp1, 0, 40, 0, 0, 1);
-					Matrix.multiplyMM(transf, 0, tmp1, 0, transf, 0);
-
-					// Translate back to the original position
-					Matrix.setIdentityM(tmp1, 0);
-					tmp1[12] = tmp[0];
-					tmp1[13] = tmp[1];
-					tmp1[14] = tmp[2];
-					tmp1[15] = tmp[3];
-					Matrix.multiplyMM(transf, 0, tmp1, 0, transf, 0);
-
-					// Apply the parent transformation
-					Matrix.multiplyMM(transf, 0, transf, 0, mModelMatF, 0);
-
-					mLeftHandModel.getChildAt(i).getModelMatrix().setAll(transf);
-
-				}
-				else
-					mLeftHandModel.getChildAt(i).getModelMatrix().setAll(mModelMatF);
-			}
-
-		//}
+//
+//			// Generate Model Matrix of the hand
+//			Matrix.setIdentityM(mModelMatF, 0);
+//			ScreenToWorld(/*mHandPose.start*/new Point(640,360)); // Translation
+//			Matrix.rotateM(mModelMatF, 0, /*mHandPose.angle*/170, 0, 0, 1); // Rotation
+//			Matrix.scaleM(mModelMatF, 0, /*mHandPose.scale*/0.3f, /*mHandPose.scale*/0.3f, /*mHandPose.scale*/0.3f); // Scale
+//
+//			// Generate Test Model Matrix
+//
+//			float tmp[] = new float[4];
+//			float tmp1[] = new float[16];
+//			float transf[] = new float[16];
+//
+//			// Palm
+//			for (int i = 0, j = mLeftHandModel.getNumChildren(); i < j; ++i)
+//			{
+//				if (mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.022") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.016"))
+//				{
+//					// Get current object coordinate
+//					tmp[0] = REF_FINGER_PTS[0][0];
+//					tmp[1] = REF_FINGER_PTS[0][1];
+//					tmp[2] = 0;
+//					tmp[3] = 1;
+//					Matrix.multiplyMV(tmp, 0, mModelMatF, 0, tmp, 0);
+//
+//					// Translate to origin
+//					Matrix.setIdentityM(transf, 0);
+//					transf[12] = -tmp[0];
+//					transf[13] = -tmp[1];
+//					transf[14] = -tmp[2];
+//					transf[15] = tmp[3];
+//
+//					// Transformation on the origin
+//					Matrix.setIdentityM(tmp1, 0);
+//					Matrix.setRotateM(tmp1, 0, 40, 0, 0, 1);
+//					Matrix.multiplyMM(transf, 0, tmp1, 0, transf, 0);
+//
+//					// Translate back to the original position
+//					Matrix.setIdentityM(tmp1, 0);
+//					tmp1[12] = tmp[0];
+//					tmp1[13] = tmp[1];
+//					tmp1[14] = tmp[2];
+//					tmp1[15] = tmp[3];
+//					Matrix.multiplyMM(transf, 0, tmp1, 0, transf, 0);
+//
+//					// Apply the parent transformation
+//					Matrix.multiplyMM(transf, 0, transf, 0, mModelMatF, 0);
+//
+//					mLeftHandModel.getChildAt(i).getModelMatrix().setAll(transf);
+//
+//				}
+//				else
+//					mLeftHandModel.getChildAt(i).getModelMatrix().setAll(mModelMatF);
+//			}
+//
+//		}
 //		else if (myhand.isVisible())
 //			myhand.setVisible(false);
 

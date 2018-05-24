@@ -44,6 +44,11 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	private static final float MIN_INNER_ANGLE = 15.0f;
 	private static final float MAX_INNER_ANGLE = 115.0f;
 
+	// Palm points thresholds
+	private static final float MIN_BASE_LENGTH = 110.0f;
+	private static final float MIN_PALM_INNER_ANGLE = 70.0f;
+	private static final float MAX_PALM_INNER_ANGLE = 170.0f;
+
 	// Parameters to create the camera perspective matrix
 	private static final float NEAR = 0.1f;
 	private static final float FAR = 100f;
@@ -101,6 +106,11 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		enableFpsMeter();
 		mHandTracking = handTracking;
 		mProjectionListener = projectionListener;
+	}
+
+	private double distanceP2P(Point a, Point b)
+	{
+		return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
 	}
 
 	private double innerAngle(Point a, Point b, Point c)
@@ -181,6 +191,7 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		mListOfContours = new ArrayList<>();
 		mHull = new MatOfInt();
 		mDefects = new MatOfInt4();
+		mHandDefect = new HandTracking.HandDefect();
 //		mFitLineMat = new Mat(4, 1, CvType.CV_32FC1);
 //		mFitLine = new float[4];
 //		mObjBBCenter = new Point();
@@ -208,7 +219,8 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		mProjectionGLInv = null;
 		mProjectionCV = null;
 		mProjectionListener.onProjectionChanged(width, height, getProjectionMat());
-		getIntrinsicParam();
+
+		mHandTracking.init();
 	}
 
 	@Override
@@ -216,15 +228,13 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	{
 		mHSV.release();
 		mBinMat.release();
-		//  mMask.release();
-		//  mMask1.release();
-		//  mMask2.release();
 		mHierarchy.release();
-		//  mSceneCorners.release();
 		mListOfContours.clear();
 		mHull.release();
 		mDefects.release();
 		mProjectionCV.release();
+
+		mHandTracking.release();
 	}
 
 	@Override
@@ -265,11 +275,10 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 				Imgproc.convexityDefects(mListOfContours.get(mLargestContour), mHull, mDefects);
 				if (mDefects.rows() >= HandTracking.MIN_HAND_DEFECTS)
 				{
-					double angle;
+					double angle, length;
 					int[] defectsList = mDefects.toArray();
 					for (mIndex = 0; mIndex < defectsList.length; ++mIndex)
 					{
-						mHandDefect = new HandTracking.HandDefect();
 						mHandDefect.startPoint.set(mListOfContours.get(mLargestContour).get(defectsList[mIndex++], 0));
 						mHandDefect.endPoint.set(mListOfContours.get(mLargestContour).get(defectsList[mIndex++], 0));
 						mHandDefect.farthestPoint.set(mListOfContours.get(mLargestContour).get(defectsList[mIndex++], 0));
@@ -283,9 +292,17 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 							if (!mHandTracking.addHandDefect(mHandDefect))
 								break;
 						}
+						length = distanceP2P(mHandDefect.startPoint, mHandDefect.endPoint);
+						if (length >= MIN_BASE_LENGTH &&
+							angle >= MIN_PALM_INNER_ANGLE &&
+							angle <= MAX_PALM_INNER_ANGLE)
+						{
+							if (!mHandTracking.addPalmPoint(mHandDefect.farthestPoint))
+								break;
+						}
 					}
 					Imgproc.drawContours(mRGBA, mListOfContours, mLargestContour, COLOR_GREEN, 1);
-					mHandTracking.calculateHandPose();
+					mHandTracking.calculateHandPose(getIntrinsicParam(), mRGBA);
 				}
 			}
 			mListOfContours.get(mLargestContour).release();

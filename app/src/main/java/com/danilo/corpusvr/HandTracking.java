@@ -1,10 +1,17 @@
 package com.danilo.corpusvr;
 
+import org.opencv.calib3d.Calib3d;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
+import org.opencv.core.Point3;
 import org.opencv.core.Scalar;
-import org.rajawali3d.math.MathUtil;
+import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 
@@ -22,6 +29,7 @@ public class HandTracking
 	private static final float DELTA_LENGTH = 0.7f;
 	private static final float MIN_FINGER_WIDTH = /*25.0f*/30.0f;
 	private static final float MAX_FINGER_WIDTH = /*60.0f*/130.0f;
+	private static final float EPSILON = 120.0f;
 	public static final int MIN_HAND_DEFECTS = 4; // min 4 hand defects, one between each finger
 	public static final int MAX_HAND_DEFECTS = 5; // max number of palm points (create one exception)
 
@@ -36,11 +44,20 @@ public class HandTracking
 	private HandPose mHandPose;
 	private HandPose mHandPoseTemp;
 	private List<HandDefect> mHandDefectsList;
+	private List<Point> mPalmPoints;
+	private MatOfPoint2f mPalmPointsMat;
 	private float d[];
 	private Point mPalmPoint;
 	private Point mMidPoint;
 	private float mPalmRadius;
 	private Point mPalmCenter;
+	private MatOfPoint3f mRefPoints;
+	private MatOfDouble mDistCoeffs;
+	private MatOfDouble mRVec;
+	private MatOfDouble mTVec;
+	private MatOfDouble mRotation;
+	private List<Integer> mRedPoints;
+	private Comparator mComparator;
 
 	public HandTracking()
 	{
@@ -48,10 +65,51 @@ public class HandTracking
 		mHandPoseTemp = new HandPose();
 		mSemaphore = new Semaphore(1);
 		mHandDefectsList = new ArrayList<>(MAX_HAND_DEFECTS);
+		mPalmPoints = new ArrayList<>(MAX_HAND_DEFECTS + 1);
 		d = new float[3];
 		mPalmPoint = new Point();
 		mMidPoint = new Point();
 		mPalmCenter = new Point();
+		mComparator = new Comparator<Integer>()
+		{
+			@Override
+			public int compare(Integer a, Integer b)
+			{
+				return b.compareTo(a);
+			}
+		};
+	}
+
+	public void init()
+	{
+		mPalmPointsMat = new MatOfPoint2f();
+		mRefPoints = new MatOfPoint3f();
+		mDistCoeffs = new MatOfDouble(0, 0, 0, 0); // Assume no distortion
+		mRVec = new MatOfDouble();
+		mTVec = new MatOfDouble();
+		mRotation = new MatOfDouble();
+
+		// Reference points
+		mRefPoints.fromArray(new Point3(-1.47686,2.59216,0),
+				new Point3(0.218609,3.08954,0),
+				new Point3(2.19977,2.62338,0),
+				new Point3(2.57853,-5.29157,0),
+				new Point3(-2.06362,-4.79628,0));
+
+		mRedPoints = new ArrayList<>(MIN_HAND_DEFECTS);
+	}
+
+	public void release()
+	{
+		mHandDefectsList.clear();
+		mPalmPoints.clear();
+		mRedPoints.clear();
+		mPalmPointsMat.release();
+		mRefPoints.release();
+		mDistCoeffs.release();
+		mRVec.release();
+		mTVec.release();
+		mRotation.release();
 	}
 
 	public HandPose getObjStatus()
@@ -94,13 +152,29 @@ public class HandTracking
 		if (mHandDefectsList.size() == MAX_HAND_DEFECTS)
 		{
 			mHandDefectsList.clear();
+			mPalmPoints.clear();
 			return false;
 		}
-		mHandDefectsList.add(defect);
+		HandDefect tmp = new HandDefect();
+		tmp.copyFrom(defect);
+		mHandDefectsList.add(tmp);
 		return true;
 	}
 
-	public void calculateHandPose()
+	public boolean addPalmPoint(Point point)
+	{
+		if (mPalmPoints.size() == MAX_HAND_DEFECTS)
+		{
+			mHandDefectsList.clear();
+			mPalmPoints.clear();
+			return false;
+		}
+		Point tmp = new Point(point.x, point.y);
+		mPalmPoints.add(tmp);
+		return true;
+	}
+
+	public void calculateHandPose(MatOfDouble intrinsicParam, Mat rgba)
 	{
 		int size = mHandDefectsList.size();
 		if (size >= MIN_HAND_DEFECTS && size <= MAX_HAND_DEFECTS)
@@ -110,56 +184,138 @@ public class HandTracking
 			{
 				int prev_index = index == 0 ? size - 1 : index - 1;
 				int next_index = (index + 1) % size;
+				int prev_index_2 = prev_index == 0 ? size - 1 : prev_index - 1;
+				int next_index_2 = (next_index + 1) % size;
+				float dist1 = distanceP2P(mHandDefectsList.get(prev_index).farthestPoint, mHandDefectsList.get(prev_index_2).farthestPoint);
+				float dist2 = distanceP2P(mHandDefectsList.get(next_index).farthestPoint, mHandDefectsList.get(next_index_2).farthestPoint);
+				boolean right_model;
 
-				mPalmPoint = mHandDefectsList.get(next_index).farthestPoint;
+				// Locate thumb
+				if (dist1 > dist2)
+				{
+					right_model = false;
+				}
+				else
+				{
+					right_model = true;
+				}
 
-				mMidPoint.x = (mHandDefectsList.get(prev_index).farthestPoint.x + mHandDefectsList.get(next_index).farthestPoint.x) / 2.0d;
-				mMidPoint.y = (mHandDefectsList.get(prev_index).farthestPoint.y + mHandDefectsList.get(next_index).farthestPoint.y) / 2.0d;
-
-				double angle = arcTang(mMidPoint, mPalmPoint);
-				mPalmRadius = mHandDefectsList.get(index).length * DELTA_LENGTH;
-
-				//Log.d(TAG, "Length: " + mHandDefectsList.get(index).length + " Palm Radius: " + mPalmRadius);
-
-				// Rotate mPalmCenter point by angle
-				mPalmCenter.x = -Math.sin(angle) * mPalmRadius;
-				mPalmCenter.y = Math.cos(angle) * mPalmRadius;
-
-				// Translate mPalmCenter to midPoint
-				mPalmCenter.x += mMidPoint.x;
-
-				// Inverted y on OpenCV
-				mPalmCenter.y -= mMidPoint.y;
-				mPalmCenter.y *= -1;
+				int i, j;
+				int size2 = mPalmPoints.size();
 
 				// Draw
-//				Imgproc.circle(rgba, mPalmCenter, (int) mPalmRadius, COLOR_BLUE, 1);
-//				Imgproc.circle(rgba, mPalmCenter, 4, COLOR_BLUE, 2);
-//				for (int i = 0; i < mHandDefectsList.size(); ++i)
-//				{
-//					Imgproc.circle(rgba, mHandDefectsList.get(i).startPoint, 4, COLOR_BLUE, 2);
-//					Imgproc.circle(rgba, mHandDefectsList.get(i).endPoint, 4, COLOR_GREEN, 2);
-//					Imgproc.circle(rgba, mHandDefectsList.get(i).farthestPoint, 4, COLOR_RED, 2);
-//					Imgproc.line(rgba, mHandDefectsList.get(i).startPoint, mHandDefectsList.get(i).endPoint, COLOR_PINK, 1);
-//					Imgproc.line(rgba, mHandDefectsList.get(i).farthestPoint, mHandDefectsList.get(i).startPoint, COLOR_PINK, 1);
-//					Imgproc.line(rgba, mHandDefectsList.get(i).farthestPoint, mHandDefectsList.get(i).endPoint, COLOR_PINK, 1);
-//				}
+				for (i = 0; i < size2; ++i)
+				{
+					Imgproc.circle(rgba, mPalmPoints.get(i), 4, COLOR_RED, 2);
+				}
 
-				// Do shit
-				mHandPoseTemp.render = true;
-				mHandPoseTemp.angle = (float) (arcTang(mPalmCenter, mMidPoint/*mHandDefectsList.get(index).farthestPoint*/) * MathUtil.PRE_180_DIV_PI);
-				mHandPoseTemp.scale = mHandDefectsList.get(index).length * DELTA_SCALE;
-				mHandPoseTemp.start = mPalmCenter;
+				// Remove redundant points
+				for (i = 0; i < size2; ++i)
+				{
+					for (j = 0; j < size; ++j)
+					{
+						if (mHandDefectsList.get(j).farthestPoint.equals(mPalmPoints.get(i)))
+						{
+							mRedPoints.add(i);
+							break;
+						}
+					}
+				}
 
-//				for (int i = 0; i < 5; ++i)
-//				{
-//					mHandPoseTemp.fingerPoses[i].start.x = 0;
-//					mHandPoseTemp.fingerPoses[i].start.y = 0;
-//					mHandPoseTemp.fingerPoses[i].angle = 0;
-//				}
+				j = mRedPoints.size();
+				if (j > 0)
+				{
+					// Sort the indices in descending order and then remove them one by one
+					mRedPoints.sort(mComparator);
+					for (i = 0; i < j; ++i)
+						mPalmPoints.remove(mRedPoints.get(i).intValue());
+
+					mRedPoints.clear();
+				}
+
+				if (mPalmPoints.size() > 2)
+				{
+					MatOfPoint2f tmp = new MatOfPoint2f();
+					MatOfPoint2f points = new MatOfPoint2f();
+					tmp.fromList(mPalmPoints);
+					Imgproc.approxPolyDP(tmp, points, EPSILON, true); // Remove noisy points
+
+					if (points.rows() == 2)
+					{
+						Point p1 = new Point(points.get(0, 0));
+						Point p2 = new Point(points.get(1, 0));
+						dist1 = distanceP2P(mHandDefectsList.get(next_index).farthestPoint, p1);
+						dist2 = distanceP2P(mHandDefectsList.get(next_index).farthestPoint, p2);
+
+						// Points need to be inserted in a specific order
+						if (dist1 < dist2)
+						{
+							mPalmPointsMat.fromArray(mHandDefectsList.get(prev_index).farthestPoint,
+									mHandDefectsList.get(index).farthestPoint,
+									mHandDefectsList.get(next_index).farthestPoint,
+									p1, p2);
+						}
+						else
+						{
+							mPalmPointsMat.fromArray(mHandDefectsList.get(prev_index).farthestPoint,
+									mHandDefectsList.get(index).farthestPoint,
+									mHandDefectsList.get(next_index).farthestPoint,
+									p2, p1);
+						}
+
+						// Find the hand's Euler angles and coordinates
+						Calib3d.solvePnP(mRefPoints, mPalmPointsMat, intrinsicParam, mDistCoeffs, mRVec, mTVec);
+
+						double[] rVecArray = mRVec.toArray();
+						rVecArray[0] += -1.0; // Inverted X angle
+						mRVec.fromArray(rVecArray);
+
+						// Convert the Euler angles to 3x3 matrix
+						Calib3d.Rodrigues(mRVec, mRotation);
+
+						double[] tVecArray = mTVec.toArray();
+
+						mHandPoseTemp.render = true;
+						mHandPoseTemp.right_model = right_model;
+
+						mHandPoseTemp.pose[0] = (float) mRotation.get(0,0)[0];
+						mHandPoseTemp.pose[1] = (float) mRotation.get(0,1)[0];
+						mHandPoseTemp.pose[2] = (float) mRotation.get(0,2)[0];
+						mHandPoseTemp.pose[3] = 0;
+						mHandPoseTemp.pose[4] = (float) mRotation.get(1,0)[0];
+						mHandPoseTemp.pose[5] = (float) mRotation.get(1,1)[0];
+						mHandPoseTemp.pose[6] = (float) mRotation.get(1,2)[0];
+						mHandPoseTemp.pose[7] = 0;
+						mHandPoseTemp.pose[8] = (float) mRotation.get(2,0)[0];
+						mHandPoseTemp.pose[9] = (float) mRotation.get(2,1)[0];
+						mHandPoseTemp.pose[10] = (float) mRotation.get(2,2)[0];
+						mHandPoseTemp.pose[11] = 0;
+						mHandPoseTemp.pose[12] = (float) tVecArray[0];
+						mHandPoseTemp.pose[13] = - (float) tVecArray[1];
+						mHandPoseTemp.pose[14] = - (float) tVecArray[2];
+						mHandPoseTemp.pose[15] = 1.0f;
+
+						// Draw
+						//float radius[] = new float[1];
+						//Imgproc.minEnclosingCircle(mPalmPointsMat, mPalmCenter, radius);
+						//mPalmRadius = radius[0];
+						//
+						//Imgproc.circle(rgba, mPalmCenter, (int) mPalmRadius, COLOR_BLUE, 1);
+						//Imgproc.circle(rgba, mPalmCenter, 4, COLOR_BLUE, 2);
+						//for (i = 0; i < size; ++i)
+						//{
+						//	Imgproc.circle(rgba, mHandDefectsList.get(i).startPoint, 4, COLOR_BLUE, 2);
+						//	Imgproc.circle(rgba, mHandDefectsList.get(i).endPoint, 4, COLOR_GREEN, 2);
+						//	Imgproc.line(rgba, mHandDefectsList.get(i).startPoint, mHandDefectsList.get(i).endPoint, COLOR_PINK, 1);
+						//	Imgproc.line(rgba, mHandDefectsList.get(i).farthestPoint, mHandDefectsList.get(i).startPoint, COLOR_PINK, 1);
+						//	Imgproc.line(rgba, mHandDefectsList.get(i).farthestPoint, mHandDefectsList.get(i).endPoint, COLOR_PINK, 1);
+						//}
+					}
+				}
 			}
 		}
 		mHandDefectsList.clear();
+		mPalmPoints.clear();
 	}
 
 	private double arcTang(Point a, Point b)
@@ -214,40 +370,15 @@ public class HandTracking
 		return (float) (Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2)));
 	}
 
-	public static class FingerPose implements Duplicable
-	{
-		public Point start;
-		public float angle;
-
-		@Override
-		public boolean copyFrom(Duplicable obj)
-		{
-			if (obj.getClass().equals(this.getClass()))
-			{
-				FingerPose tmp = (FingerPose) obj;
-				start.x = tmp.start.x;
-				start.y = tmp.start.y;
-				angle = tmp.angle;
-				return true;
-			}
-			return false;
-		}
-
-		public FingerPose()
-		{
-			start = new Point(0, 0);
-			angle = 0;
-		}
-	}
-
 	public static class HandPose implements Duplicable
 	{
 		public boolean render;
 		public boolean right_model;
+		public float pose[];
 		public Point start;
 		public float angle;
 		public float scale;
-		public FingerPose[] fingerPoses;
+		public float fingerAngles[];
 
 		@Override
 		public boolean copyFrom(Duplicable obj)
@@ -261,6 +392,8 @@ public class HandTracking
 				start.y = tmp.start.y;
 				angle = tmp.angle;
 				scale = tmp.scale;
+				System.arraycopy(tmp.fingerAngles, 0, fingerAngles, 0, 5);
+				System.arraycopy(tmp.pose, 0, pose, 0, 16);
 				return true;
 			}
 			return false;
@@ -273,7 +406,8 @@ public class HandTracking
 			start = new Point(0, 0);
 			angle = 0;
 			scale = 0;
-			fingerPoses = new FingerPose[5];
+			fingerAngles = new float[5];
+			pose = new float[16];
 		}
 	}
 
