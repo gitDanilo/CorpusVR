@@ -80,23 +80,25 @@ public class HandTracking
 
 		// Reference points
 //		mRefPoints.fromArray(new Point3(-1.47686,2.59216,0),
-//				new Point3(0.218609,3.08954,0),
-//				new Point3(2.19977,2.62338,0),
-//				new Point3(2.57853,-5.29157,0),
-//				new Point3(-2.06362,-4.79628,0));
+//							 new Point3(0.218609,3.08954,0),
+//							 new Point3(2.19977,2.62338,0),
+//							 new Point3(2.57853,-5.29157,0),
+//							 new Point3(-2.06362,-4.79628,0));
 
-		//(-3.2, -0.2);(-1.9,  2.5); (0, 3);(1.9,  2.5)
+//		mRefPoints.fromArray(new Point3(-1.464284,0.208872,0), // X = -146.4284     Y = 20.8872      Z = 0.0000
+//							 new Point3(-0.514284,1.438872,0), // X = -51.4284      Y = 143.8872     Z = 0.0000
+//							 new Point3(0.145716,1.378872,0),  // X = 14.5716       Y = 137.8872     Z = 0.0000
+//							 new Point3(0.795716,1.018872,0)); // X = 79.5716       Y = 101.8872     Z = 0.0000
 
-		mRefPoints.fromArray(new Point3(-1.464284,0.208872,0), // X = -146.4284     Y = 20.8872      Z = 0.0000
-							 new Point3(-0.514284,1.438872,0), // X = -51.4284      Y = 143.8872     Z = 0.0000
-							 new Point3(0.145716,1.378872,0),  // X = 14.5716       Y = 137.8872     Z = 0.0000
-							 new Point3(0.795716,1.018872,0)); // X = 79.5716       Y = 101.8872     Z = 0.0000
+		mRefPoints.fromArray(new Point3(-1.104284,0.068872,0.012255),
+							 new Point3(-0.514284,1.358872,0),
+							 new Point3(0.125716,1.378872,0),
+							 new Point3(0.695716,1.218872,0));
 
-//		mRefPoints.fromArray(new Point3(-0.925455, -0.728291, 0),
-//								new Point3(-0.515455, 1.701709, 0),
-//								new Point3(0.144545, 1.641709, 0),
-//								new Point3(0.794545, 1.281709, 0),
-//								new Point3(0.834545, -1.138291, 0));
+//		mRefPoints.fromArray(new Point3(-1.214284,0.068872,0.012255),
+//							 new Point3(-0.514284,1.358872,0),
+//							 new Point3(0.125716,1.378872,0),
+//							 new Point3(0.695716,1.218872,0));
 	}
 
 	public void release()
@@ -201,10 +203,6 @@ public class HandTracking
 					right_model = true;
 				}
 
-//				Log.d(TAG, "right_model = " + right_model);
-//				Log.d(TAG, "distance = " + (right_model ? distList[0] : distList[1]));
-//				Log.d(TAG, "distance2 = " + distanceP2P(mHandDefectsList.get(index).farthestPoint, mHandDefectsList.get(next_index).farthestPoint));
-
 				// Draw
 //				int i, j = mPalmPoints.size();
 //				for (i = 0; i < j; ++i)
@@ -213,18 +211,6 @@ public class HandTracking
 //				}
 
 //				Imgproc.isContourConvex();
-
-//				mHandPoseTemp.thumb.x = mHandDefectsList.get(right_model ? prev_index_2 : next_index_2).farthestPoint.x;
-//				mHandPoseTemp.thumb.y = mHandDefectsList.get(right_model ? prev_index_2 : next_index_2).farthestPoint.y;
-//
-//				mHandPoseTemp.index.x = mHandDefectsList.get(next_index).farthestPoint.x;
-//				mHandPoseTemp.index.y = mHandDefectsList.get(next_index).farthestPoint.y;
-//
-//				mHandPoseTemp.middle.x = mHandDefectsList.get(index).farthestPoint.x;
-//				mHandPoseTemp.middle.y = mHandDefectsList.get(index).farthestPoint.y;
-//
-//				mHandPoseTemp.ring.x = mHandDefectsList.get(prev_index).farthestPoint.x;
-//				mHandPoseTemp.ring.y = mHandDefectsList.get(prev_index).farthestPoint.y;
 
 				if (right_model)
 				{
@@ -244,24 +230,13 @@ public class HandTracking
 											 mHandDefectsList.get(next_index).farthestPoint,
 											 mHandDefectsList.get(index).farthestPoint,
 											 mHandDefectsList.get(prev_index).farthestPoint);
-
-//					Log.d(TAG, "thumb : " + mHandDefectsList.get(next_index_2).farthestPoint);
-//					Log.d(TAG, "index : " + mHandDefectsList.get(next_index).farthestPoint);
-//					Log.d(TAG, "middle: " + mHandDefectsList.get(index).farthestPoint);
-//					Log.d(TAG, "ring  : " + mHandDefectsList.get(prev_index).farthestPoint);
 				}
-
-//				mPalmPointsMat.fromArray(new Point(573.0, 547.0),
-//										 new Point(614.0, 304.0),
-//										 new Point(680.0, 310.0),
-//										 new Point(745.0, 346.0),
-//				                         new Point(749.0, 588.0));
 
 				// Find the hand's Euler angles and coordinates
 				Calib3d.solvePnP(mRefPoints, mPalmPointsMat, intrinsicParam, mDistCoeffs, mRVec, mTVec);
 
 				double[] rVecArray = mRVec.toArray();
-				rVecArray[0] += -1.0; // Inverted X angle
+				rVecArray[0] *= -1.0; // Inverted X angle
 				mRVec.fromArray(rVecArray);
 
 				// Convert the Euler angles to 3x3 matrix
@@ -356,11 +331,6 @@ public class HandTracking
 		public float scale;
 		public float fingerAngles[];
 
-		public Point thumb;
-		public Point index;
-		public Point middle;
-		public Point ring;
-
 		@Override
 		public boolean copyFrom(Duplicable obj)
 		{
@@ -375,19 +345,6 @@ public class HandTracking
 				scale = tmp.scale;
 				System.arraycopy(tmp.fingerAngles, 0, fingerAngles, 0, 5);
 				System.arraycopy(tmp.pose, 0, pose, 0, 16);
-
-				thumb.x = tmp.thumb.x;
-				thumb.y = tmp.thumb.y;
-
-				index.x = tmp.index.x;
-				index.y = tmp.index.y;
-
-				middle.x = tmp.middle.x;
-				middle.y = tmp.middle.y;
-
-				ring.x = tmp.ring.x;
-				ring.y = tmp.ring.y;
-
 				return true;
 			}
 			return false;
@@ -402,11 +359,6 @@ public class HandTracking
 			scale = 0;
 			fingerAngles = new float[5];
 			pose = new double[16];
-
-			thumb = new Point();
-			index = new Point();
-			middle = new Point();
-			ring = new Point();
 		}
 	}
 

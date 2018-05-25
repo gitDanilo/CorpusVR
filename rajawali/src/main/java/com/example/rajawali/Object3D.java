@@ -67,6 +67,7 @@ public class Object3D extends ATransformable3D implements Comparable<Object3D>, 
     protected List<Object3D> mChildren;
     protected String         mName;
 
+    protected boolean mUseCustomModelView    = false;
     protected boolean mDoubleSided           = false;
     protected boolean mBackSided             = false;
     protected boolean mTransparent           = false;
@@ -110,6 +111,11 @@ public class Object3D extends ATransformable3D implements Comparable<Object3D>, 
         this();
         mName = name;
     }
+
+    public void setUseCustomModelView(boolean customModelView)
+	{
+		mUseCustomModelView = customModelView;
+	}
 
     /**
      * Passes the data to the Geometry3D instance. Vertex Buffer Objects (VBOs) will be created.
@@ -202,12 +208,23 @@ public class Object3D extends ATransformable3D implements Comparable<Object3D>, 
 
         // -- move view matrix transformation first
         boolean modelMatrixWasRecalculated = onRecalculateModelMatrix(parentMatrix);
-        // -- calculate model view matrix;
-        mMVMatrix.setAll(vMatrix).multiply(mMMatrix);
-        // -- calculate inverse view matrix;
-        mInverseViewMatrix.setAll(vMatrix).inverse();
-        //Create MVP Matrix from View-Projection Matrix
-        mMVPMatrix.setAll(vpMatrix).multiply(mMMatrix);
+
+		if (!mUseCustomModelView)
+		{
+			// Original code
+			// -- calculate model view matrix;
+			mMVMatrix.setAll(vMatrix).multiply(mMMatrix);
+			//Create MVP Matrix from View-Projection Matrix
+			mMVPMatrix.setAll(vpMatrix).multiply(mMMatrix);
+		}
+		else
+		{
+			// -- calculate MVP matrix using the custom MV matrix
+			mMVPMatrix.setAll(projMatrix).multiply(mMVMatrix);
+		}
+
+		// -- calculate inverse view matrix;
+		mInverseViewMatrix.setAll(vMatrix).inverse();
 
         // Transform the bounding volumes if they exist
         if (mGeometry.hasBoundingBox()) {
@@ -931,7 +948,8 @@ public class Object3D extends ATransformable3D implements Comparable<Object3D>, 
         return mInverseViewMatrix;
     }
 
-    public Matrix4 getModelViewMatrix() {
+    public Matrix4 getModelViewMatrix()
+	{
         return mMVMatrix;
     }
 

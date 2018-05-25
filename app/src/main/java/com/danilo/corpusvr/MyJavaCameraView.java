@@ -243,12 +243,6 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	{
 		mRGBA = inputFrame.rgba();
 
-		Imgproc.circle(mRGBA, new Point(573.0, 547.0), 4, COLOR_BLUE, 2);
-		Imgproc.circle(mRGBA, new Point(614.0, 304.0), 4, COLOR_BLUE, 2);
-		Imgproc.circle(mRGBA, new Point(680.0, 310.0), 4, COLOR_BLUE, 2);
-		Imgproc.circle(mRGBA, new Point(745.0, 346.0), 4, COLOR_BLUE, 2);
-		Imgproc.circle(mRGBA, new Point(749.0, 588.0), 4, COLOR_BLUE, 2);
-
 		Imgproc.cvtColor(mRGBA, mHSV, Imgproc.COLOR_RGB2HSV);
 		Core.inRange(mHSV, mMinHSV1, mMaxHSV1, mBinMat);
 		Imgproc.medianBlur(mBinMat, mBinMat, BLUR_SIZE);

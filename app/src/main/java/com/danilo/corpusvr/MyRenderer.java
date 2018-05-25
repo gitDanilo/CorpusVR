@@ -2,9 +2,9 @@ package com.danilo.corpusvr;
 
 import android.content.Context;
 import android.graphics.Color;
-import android.opengl.Matrix;
 import android.view.MotionEvent;
 
+import com.example.rajawali.math.Matrix;
 import com.example.rajawali.Object3D;
 import com.example.rajawali.lights.DirectionalLight;
 import com.example.rajawali.loader.LoaderOBJ;
@@ -39,7 +39,7 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	// Matrices
 	//private float[] mModelMatTest;
 
-	private float[] mModelMatF;
+	private double[] mModelMatF;
 	private Matrix4 mProjMat;
 	private Matrix4  mMVPInvMat;
 	//private float[] mViewMatrix = new float[]{1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, -4.0f, 1.0f}; // default ViewMatrix from OpenGL Renderer
@@ -74,7 +74,7 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 		mModelMatF[14] = /*2.0f * 0.5f*//*Z*//* - 1.0f*/0;
 		mModelMatF[15] = 1.0f;
 
-		Matrix.multiplyMV(mModelMatF, 12, mMVPInvMat.getFloatValues(), 0, mModelMatF, 12);
+		Matrix.multiplyMV(mModelMatF, 12, mMVPInvMat.getDoubleValues(), 0, mModelMatF, 12);
 
 		mModelMatF[12] /= mModelMatF[15];
 		mModelMatF[13] /= mModelMatF[15];
@@ -100,10 +100,10 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 			getCurrentCamera().setProjectionMatrix(mProjMat);
 
 		//mModelMatTest = new float[16];
-		mModelMatF = new float[16];
+		mModelMatF = new double[16];
 
 		// Scene basic light
-		mDirectionalLight = new DirectionalLight(4, 4, -4);
+		mDirectionalLight = new DirectionalLight(4, 4, 4);
 		mDirectionalLight.setColor(1.0f, 1.0f, 1.0f);
 		mDirectionalLight.setPower(1.25f);
 		getCurrentScene().addLight(mDirectionalLight);
@@ -132,9 +132,11 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 		}
 		mLeftHandModel = loaderOBJ.getParsedObject();
 		getCurrentScene().addChild(mLeftHandModel);
+		for (int i = 0, j = mLeftHandModel.getNumChildren(); i < j; ++i)
+			mLeftHandModel.getChildAt(i).setUseCustomModelView(true);
 		mLeftHandModel.setVisible(false);
 
-		//	myhand.setMaterial(material); Its possible to remove the loaded material and change for a new one: https://github.com/Rajawali/Rajawali/issues/2015
+		//	mLeftHandModel.setMaterial(material); Its possible to remove the loaded material and change for a new one: https://github.com/Rajawali/Rajawali/issues/2015
 
 		mBadTrackFramesCount = MAX_BAD_TRACK_FRAMES;
 		mAngle = 0;
@@ -156,40 +158,26 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 			if (!mLeftHandModel.isVisible())
 				mLeftHandModel.setVisible(true);
 
+			// Generate Model Matrix of the hand
+//			Matrix.setIdentityM(mModelMatF, 0);
+//			ScreenToWorld(mHandPose.start); // Translation
+			//Matrix.rotateM(mModelMatF, 0, /*mHandPose.angle*/170, 0, 0, 1); // Rotation
+//			Matrix.scaleM(mModelMatF, 0, /*mHandPose.scale*/0.3, /*mHandPose.scale*/0.3, /*mHandPose.scale*/0.3); // Scale
 
+			// Generate Test Model Matrix
+//			double tmp[] = new double[4];
+//			double tmp1[] = new double[16];
+//			double transf[] = new double[16];
 
-			//Matrix.setIdentityM(mHandPose.pose, 0);
-			//Matrix.rotateM(mHandPose.pose, 0, 80, 0, 0, 1);
-			//Matrix.scaleM(mHandPose.pose, 0, 4, 4, 4);
-
-			//Matrix4 tmp = new Matrix4(mHandPose.pose);
-			//tmp.scale(40);
+			Matrix4 tmp2 = new Matrix4(mHandPose.pose);
+			tmp2.scale(30);
 			//tmp.rotate(0, 1, 0, 76);
 			//tmp.rotate(0, 0, 1, 45);
-			//tmp.rotate(1, 0, 0, -90);
+			//tmp.rotate(1, 0, 0, 90);
 			//tmp.scale(26);
 
 			for (int i = 0, j = mLeftHandModel.getNumChildren(); i < j; ++i)
 			{
-				mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(mHandPose.pose);
-			}
-
-//
-//			// Generate Model Matrix of the hand
-//			Matrix.setIdentityM(mModelMatF, 0);
-//			ScreenToWorld(/*mHandPose.start*/new Point(640,360)); // Translation
-//			Matrix.rotateM(mModelMatF, 0, /*mHandPose.angle*/170, 0, 0, 1); // Rotation
-//			Matrix.scaleM(mModelMatF, 0, /*mHandPose.scale*/0.3f, /*mHandPose.scale*/0.3f, /*mHandPose.scale*/0.3f); // Scale
-//
-//			// Generate Test Model Matrix
-//
-//			float tmp[] = new float[4];
-//			float tmp1[] = new float[16];
-//			float transf[] = new float[16];
-//
-//			// Palm
-//			for (int i = 0, j = mLeftHandModel.getNumChildren(); i < j; ++i)
-//			{
 //				if (mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.022") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.016"))
 //				{
 //					// Get current object coordinate
@@ -222,13 +210,11 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 //					// Apply the parent transformation
 //					Matrix.multiplyMM(transf, 0, transf, 0, mModelMatF, 0);
 //
-//					mLeftHandModel.getChildAt(i).getModelMatrix().setAll(transf);
-//
+//					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(transf);
 //				}
 //				else
-//					mLeftHandModel.getChildAt(i).getModelMatrix().setAll(mModelMatF);
-//			}
-//
+					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(tmp2);
+			}
 		}
 		else
 		{
