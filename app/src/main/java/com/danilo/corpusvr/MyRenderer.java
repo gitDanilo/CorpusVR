@@ -1,15 +1,20 @@
 package com.danilo.corpusvr;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.opengl.Matrix;
 import android.view.MotionEvent;
 
+import com.example.rajawali.Object3D;
+import com.example.rajawali.lights.DirectionalLight;
+import com.example.rajawali.loader.LoaderOBJ;
+import com.example.rajawali.loader.ParsingException;
+import com.example.rajawali.materials.Material;
+import com.example.rajawali.math.Matrix4;
+import com.example.rajawali.primitives.Sphere;
+import com.example.rajawali.renderer.Renderer;
+
 import org.opencv.core.Point;
-import org.rajawali3d.Object3D;
-import org.rajawali3d.lights.DirectionalLight;
-import org.rajawali3d.math.Matrix4;
-import org.rajawali3d.primitives.Sphere;
-import org.rajawali3d.renderer.Renderer;
 
 public class MyRenderer extends Renderer implements CameraProjectionListener
 {
@@ -21,12 +26,12 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	private int mScreenHeight = -1;
 
 	// Tracking information
-	private static final float REF_FINGER_PTS[][] = new float[][]{{-0.0200068f,  0.0397161f},
-																  { 0.0201293f,  0.0293674f},
-																  { 0.0299186f,  0.0100685f},
-																  { 0.0317366f, -0.0064334f},
-																  { 0.0230661f, -0.0267112f}};
-	private static final long MAX_BAD_TRACK_FRAMES = 5;
+	private static final double REF_FINGER_PTS[][] = new double[][]{{-0.0200068,  0.0397161},
+																    { 0.0201293,  0.0293674},
+																    { 0.0299186,  0.0100685},
+																    { 0.0317366, -0.0064334},
+																    { 0.0230661, -0.0267112}};
+	private static final long MAX_BAD_TRACK_FRAMES = 8;
 	private HandTracking.HandPose mHandPose;
 	private HandTracking mHandTracking;
 	private long mBadTrackFramesCount;
@@ -88,8 +93,8 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	protected void initScene()
 	{
 		//  http://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices/#an-introduction-to-matrices
-		//  getCurrentCamera().getModelMatrix().identity();
-		//  getCurrentCamera().getViewMatrix().identity();
+		//getCurrentCamera().getModelMatrix().identity();
+		//getCurrentCamera().getViewMatrix().identity();
 
 		if (mProjMat != null)
 			getCurrentCamera().setProjectionMatrix(mProjMat);
@@ -104,30 +109,30 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 		getCurrentScene().addLight(mDirectionalLight);
 
 		// Debug object basic material (disable light so it looks 2D)
-//		Material material = new Material();
-//		material.enableLighting(false);
+		Material material = new Material();
+		material.enableLighting(false);
 		//material.setDiffuseMethod(new DiffuseMethod.Lambert());
-//		material.setColor(Color.RED);
+		material.setColor(Color.RED);
 
 		// Debug object
-//		mSphere = new Sphere(0.02f, 24, 24);
-//		mSphere.setMaterial(material);
-//		getCurrentScene().addChild(mSphere);
-//		mSphere.setVisible(true);
+		mSphere = new Sphere(0.02f, 24, 24);
+		mSphere.setMaterial(material);
+		getCurrentScene().addChild(mSphere);
+		mSphere.setVisible(true);
 
 		// Load OBJ and MTL files
-//		LoaderOBJ loaderOBJ = new LoaderOBJ(this, R.raw.lefthand_obj);
-//		try
-//		{
-//			loaderOBJ.parse();
-//		}
-//		catch (ParsingException e)
-//		{
-//			e.printStackTrace();
-//		}
-//		mLeftHandModel = loaderOBJ.getParsedObject();
-//		getCurrentScene().addChild(mLeftHandModel);
-//		mLeftHandModel.setVisible(true);
+		LoaderOBJ loaderOBJ = new LoaderOBJ(this, R.raw.lefthand_obj);
+		try
+		{
+			loaderOBJ.parse();
+		}
+		catch (ParsingException e)
+		{
+			e.printStackTrace();
+		}
+		mLeftHandModel = loaderOBJ.getParsedObject();
+		getCurrentScene().addChild(mLeftHandModel);
+		mLeftHandModel.setVisible(false);
 
 		//	myhand.setMaterial(material); Its possible to remove the loaded material and change for a new one: https://github.com/Rajawali/Rajawali/issues/2015
 
@@ -140,16 +145,35 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	{
 		super.onRender(ellapsedRealtime, deltaTime);
 
-//		mHandPose = mHandTracking.getObjStatus();
-//		if (mHandPose.render || mBadTrackFramesCount < MAX_BAD_TRACK_FRAMES)
-//		{
-//			if (mHandPose.render)
-//				mBadTrackFramesCount = 0;
-//			else
-//				++mBadTrackFramesCount;
-//
-//			if (!myhand.isVisible())
-//				myhand.setVisible(true);
+		mHandPose = mHandTracking.getObjStatus();
+		if (mHandPose.render || mBadTrackFramesCount < MAX_BAD_TRACK_FRAMES)
+		{
+			if (mHandPose.render)
+				mBadTrackFramesCount = 0;
+			else
+				++mBadTrackFramesCount;
+
+			if (!mLeftHandModel.isVisible())
+				mLeftHandModel.setVisible(true);
+
+
+
+			//Matrix.setIdentityM(mHandPose.pose, 0);
+			//Matrix.rotateM(mHandPose.pose, 0, 80, 0, 0, 1);
+			//Matrix.scaleM(mHandPose.pose, 0, 4, 4, 4);
+
+			//Matrix4 tmp = new Matrix4(mHandPose.pose);
+			//tmp.scale(40);
+			//tmp.rotate(0, 1, 0, 76);
+			//tmp.rotate(0, 0, 1, 45);
+			//tmp.rotate(1, 0, 0, -90);
+			//tmp.scale(26);
+
+			for (int i = 0, j = mLeftHandModel.getNumChildren(); i < j; ++i)
+			{
+				mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(mHandPose.pose);
+			}
+
 //
 //			// Generate Model Matrix of the hand
 //			Matrix.setIdentityM(mModelMatF, 0);
@@ -205,9 +229,12 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 //					mLeftHandModel.getChildAt(i).getModelMatrix().setAll(mModelMatF);
 //			}
 //
-//		}
-//		else if (myhand.isVisible())
-//			myhand.setVisible(false);
+		}
+		else
+		{
+			if (mLeftHandModel.isVisible())
+				mLeftHandModel.setVisible(false);
+		}
 
 	}
 

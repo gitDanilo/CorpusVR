@@ -13,10 +13,11 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 
+import com.example.rajawali.view.ISurface;
+import com.example.rajawali.view.SurfaceView;
+
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.OpenCVLoader;
-import org.rajawali3d.view.ISurface;
-import org.rajawali3d.view.SurfaceView;
 
 public class MainActivity extends AppCompatActivity
 {
@@ -98,6 +99,7 @@ public class MainActivity extends AppCompatActivity
 		mFrame = new FrameLayout(this);
 		mFrame.setBackgroundColor(Color.BLACK);
 		mFrame.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+		mFrame.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
 		setContentView(mFrame);
 
 		// Create HandTracking Object
@@ -136,7 +138,7 @@ public class MainActivity extends AppCompatActivity
 		super.onResume();
 
 		View decorView = getWindow().getDecorView();
-		decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+		decorView.setSystemUiVisibility(  View.SYSTEM_UI_FLAG_LAYOUT_STABLE
 										| View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
 										| View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
 										| View.SYSTEM_UI_FLAG_HIDE_NAVIGATION

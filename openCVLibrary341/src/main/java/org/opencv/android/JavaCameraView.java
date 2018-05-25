@@ -159,7 +159,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 			{
 				Camera.Parameters params = mCamera.getParameters();
 				params.setPreviewFpsRange(MIN_FPS, MAX_FPS);
-				params.setExposureCompensation(params.getMaxExposureCompensation() / 3);
+				params.setExposureCompensation(params.getMaxExposureCompensation() / 4);
 				Log.d(TAG, "getSupportedPreviewSizes()");
 				List<android.hardware.Camera.Size> sizes = params.getSupportedPreviewSizes();
 

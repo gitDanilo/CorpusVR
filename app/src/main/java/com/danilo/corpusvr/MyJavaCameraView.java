@@ -35,7 +35,7 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 
 	// Image filtering parameters
 	private static final int BLUR_SIZE = 5;
-	private static final int ELEMENT_SIZE = 4;
+	private static final int ELEMENT_SIZE = 3;
 	private static final double PI = 3.1415926535897932384626433832795d;
 
 	// Hand defect thresholds
@@ -45,31 +45,33 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	private static final float MAX_INNER_ANGLE = 115.0f;
 
 	// Palm points thresholds
-	private static final float MIN_BASE_LENGTH = 110.0f;
-	private static final float MIN_PALM_INNER_ANGLE = 70.0f;
-	private static final float MAX_PALM_INNER_ANGLE = 170.0f;
+	private static final float MIN_BASE_LENGTH = 40.0f;
+	private static final float MIN_PALM_INNER_ANGLE = 50.0f;
+	private static final float MAX_PALM_INNER_ANGLE = 179.0f;
 
 	// Parameters to create the camera perspective matrix
 	private static final float NEAR = 0.1f;
 	private static final float FAR = 100f;
+
 	private CameraProjectionListener mProjectionListener;
 	private HandTracking mHandTracking;
+
 	// Camera parameters
 	private int mScreenWidth = -1;
 	private int mScreenHeight = -1;
 	private float mFOVX = 0;
 	private float mFOVY = 0;
+
 	// Camera matrices
 	private MatOfDouble mProjectionCV;
 	private float[] mProjectionGL;
-	private float[] mProjectionGLInv;
-	private float[] mWorldPoint;
-	private float[] mModelViewMatrix = new float[]{1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, -4.0f, 1.0f}; // default ModelViewMatrix from OpenGL Renderer
 
 	// Processed images
 	private Mat mRGBA;
 	private Mat mHSV;
 	private Mat mBinMat;
+	//private Mat mROI;
+	//private Mat mElementMat;
 
 	// Color filter
 	//	private Mat mMask = null;
@@ -184,8 +186,8 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		//  mMaxHSV1 = new Scalar(10, 255, 255);
 		//  mMinHSV2 = new Scalar(170, 70, 50);
 		//  mMaxHSV2 = new Scalar(180, 255, 255);
-		mMinHSV1 = new Scalar(0, 30, 60);
-		mMaxHSV1 = new Scalar(20, 150, 255);
+		mMinHSV1 = new Scalar(0, 20, 60); // 0, 20, 60
+		mMaxHSV1 = new Scalar(20, 150, 255); // 20, 150, 255
 		//  mIntSceneCorners = new MatOfPoint();
 		//  mSceneCorners = new Mat(4, 1, CvType.CV_32FC2);
 		mListOfContours = new ArrayList<>();
@@ -212,14 +214,13 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		//  		new Point3( 5,  5, 0.0),
 		//  		new Point3(-5,  5, 0.0));
 
-		//  Size elementSize = new Size(2 * ELEMENT_SIZE + 1, 2 * ELEMENT_SIZE + 1);
-		//  Point elementPoint = new Point(ELEMENT_SIZE, ELEMENT_SIZE);
-		//  mElementMat = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, elementSize, elementPoint);
+//		Size elementSize = new Size(2 * ELEMENT_SIZE + 1, 2 * ELEMENT_SIZE + 1);
+//		Point elementPoint = new Point(ELEMENT_SIZE, ELEMENT_SIZE);
+//		mElementMat = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, elementSize, elementPoint);
 		mProjectionGL = null;
-		mProjectionGLInv = null;
 		mProjectionCV = null;
 		mProjectionListener.onProjectionChanged(width, height, getProjectionMat());
-
+		getIntrinsicParam();
 		mHandTracking.init();
 	}
 
@@ -242,7 +243,11 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	{
 		mRGBA = inputFrame.rgba();
 
-//		Imgproc.circle(mRGBA, new Point(1275, 715), 4, COLOR_BLUE, 2);
+		Imgproc.circle(mRGBA, new Point(573.0, 547.0), 4, COLOR_BLUE, 2);
+		Imgproc.circle(mRGBA, new Point(614.0, 304.0), 4, COLOR_BLUE, 2);
+		Imgproc.circle(mRGBA, new Point(680.0, 310.0), 4, COLOR_BLUE, 2);
+		Imgproc.circle(mRGBA, new Point(745.0, 346.0), 4, COLOR_BLUE, 2);
+		Imgproc.circle(mRGBA, new Point(749.0, 588.0), 4, COLOR_BLUE, 2);
 
 		Imgproc.cvtColor(mRGBA, mHSV, Imgproc.COLOR_RGB2HSV);
 		Core.inRange(mHSV, mMinHSV1, mMaxHSV1, mBinMat);
@@ -269,6 +274,11 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 					mListOfContours.get(mIndex).release();
 				}
 			}
+
+//			Rect objBB = Imgproc.boundingRect(mListOfContours.get(mLargestContour));
+//			mROI = mBinMat.submat(objBB);
+//			Imgproc.dilate(mROI, mROI, mElementMat);
+
 			Imgproc.convexHull(mListOfContours.get(mLargestContour), mHull, true);
 			if (!mHull.empty())
 			{
@@ -284,6 +294,9 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 						mHandDefect.farthestPoint.set(mListOfContours.get(mLargestContour).get(defectsList[mIndex++], 0));
 						mHandDefect.length = defectsList[mIndex] / 256.0f;
 						angle = innerAngle(mHandDefect.startPoint, mHandDefect.endPoint, mHandDefect.farthestPoint);
+
+//						Imgproc.circle(mRGBA, mHandDefect.farthestPoint, 4, COLOR_GREEN, 2);
+
 						if (mHandDefect.length >= MIN_FINGER_LENGTH &&
 							mHandDefect.length <= MAX_FINGER_LENGTH &&
 							angle >= MIN_INNER_ANGLE &&
@@ -292,13 +305,16 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 							if (!mHandTracking.addHandDefect(mHandDefect))
 								break;
 						}
-						length = distanceP2P(mHandDefect.startPoint, mHandDefect.endPoint);
-						if (length >= MIN_BASE_LENGTH &&
-							angle >= MIN_PALM_INNER_ANGLE &&
-							angle <= MAX_PALM_INNER_ANGLE)
+						else
 						{
-							if (!mHandTracking.addPalmPoint(mHandDefect.farthestPoint))
-								break;
+							length = distanceP2P(mHandDefect.startPoint, mHandDefect.endPoint);
+							if (length >= MIN_BASE_LENGTH &&
+								angle >= MIN_PALM_INNER_ANGLE &&
+								angle <= MAX_PALM_INNER_ANGLE)
+							{
+								if (!mHandTracking.addPalmPoint(mHandDefect.farthestPoint))
+									break;
+							}
 						}
 					}
 					Imgproc.drawContours(mRGBA, mListOfContours, mLargestContour, COLOR_GREEN, 1);
