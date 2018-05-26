@@ -171,34 +171,70 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 			double tmp1[] = new double[16];
 			double transf[] = new double[16];
 
-			Matrix4 tmp2 = new Matrix4(mHandPose.pose);
-			tmp2.scale(30);
-			//tmp.rotate(0, 1, 0, 76);
-			//tmp.rotate(0, 0, 1, 45);
-			//tmp.rotate(1, 0, 0, 90);
-			//tmp.scale(26);
+			Matrix4 mvMatrix = new Matrix4(mHandPose.pose);
+			mvMatrix.scale(25);
+//			mvMatrix.rotate(0, 1, 0, 20);
+//			mvMatrix.rotate(1, 0, 0, -26);
+			//mvMatrix.rotate(0, 0, 1, 45);
+			//mvMatrix.rotate(1, 0, 0, 90);
+			//mvMatrix.scale(26);
+
+			tmp[0] = -0.042;
+			tmp[1] = 0.012;
+			tmp[2] = 0;
+			tmp[3] = 1;
+
+			Matrix4 model = new Matrix4();
+
+			// Translate to the origin
+			Matrix.setIdentityM(tmp1, 0);
+			tmp1[12] = - tmp[0];
+			tmp1[13] = - tmp[1];
+			tmp1[14] = - tmp[2];
+			tmp1[15] = tmp[3];
+			model.leftMultiply(new Matrix4(tmp1));
+
+			// Rotate
+			Matrix.setIdentityM(tmp1, 0);
+			Matrix.setRotateM(tmp1, 0, 180, 0, 0, 1);
+			model.leftMultiply(new Matrix4(tmp1));
+
+			// Translate back
+			Matrix.setIdentityM(tmp1, 0);
+			tmp1[12] = tmp[0];
+			tmp1[13] = tmp[1];
+			tmp1[14] = tmp[2];
+			tmp1[15] = tmp[3];
+			model.leftMultiply(new Matrix4(tmp1));
+
+			Matrix4 view = new Matrix4();
+			view.inverse();
+			view.leftMultiply(mvMatrix);
+
+			Matrix4 newMV = new Matrix4(view);
+			newMV.multiply(model);
 
 			for (int i = 0, j = mLeftHandModel.getNumChildren(); i < j; ++i)
 			{
 				if (mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.022") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.016"))
 				{
 					// Get current object coordinate
-					tmp[0] = 0.0001;
-					tmp[1] = 0;
-					tmp[2] = 10;
-					tmp[3] = 1;
-					Matrix.multiplyMV(tmp, 0, tmp2.getDoubleValues(), 0, tmp, 0);
+//					tmp[0] = 0.0001;
+//					tmp[1] = 0;
+//					tmp[2] = 10;
+//					tmp[3] = 1;
+//					Matrix.multiplyMV(tmp, 0, tmp2.getDoubleValues(), 0, tmp, 0);
 
-					Matrix.setIdentityM(tmp1, 0);
+//					Matrix.setIdentityM(tmp1, 0);
 					//0.5409334617229711, 1.1049283846825118, -24.130624956012504, 1.0
 //					System.arraycopy(tmp2.getDoubleValues(), 0, tmp1, 0, 16);
-					tmp1[12] = tmp[0];
-					tmp1[13] = tmp[1];
-					tmp1[14] = tmp[2];
-					tmp1[15] = tmp[3];
+//					tmp1[12] = tmp[0];
+//					tmp1[13] = tmp[1];
+//					tmp1[14] = tmp[2];
+//					tmp1[15] = tmp[3];
 
 
-					mSphere.getModelViewMatrix().setAll(tmp1);
+//					mSphere.getModelViewMatrix().setAll(tmp1);
 
 //					Log.d(TAG, "mSphere: (" + tmp[0] + ", " + tmp[1] + ", " + tmp[2] + ", " + tmp[3] + ")\n");
 
@@ -225,10 +261,10 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 					// Apply the parent transformation
 //					Matrix.multiplyMM(transf, 0, transf, 0, mModelMatF, 0);
 
-					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(tmp2);
+					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(newMV);
 				}
 				else
-					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(tmp2);
+					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(mvMatrix);
 			}
 		}
 		else
@@ -237,8 +273,7 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 				mLeftHandModel.setVisible(false);
 		}
 
-		mLeftHandModel.setVisible(false);
-
+//		mLeftHandModel.setVisible(false);
 	}
 
 	@Override

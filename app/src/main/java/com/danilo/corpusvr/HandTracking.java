@@ -79,26 +79,25 @@ public class HandTracking
 		mRotation = new MatOfDouble();
 
 		// Reference points
-//		mRefPoints.fromArray(new Point3(-1.47686,2.59216,0),
-//							 new Point3(0.218609,3.08954,0),
-//							 new Point3(2.19977,2.62338,0),
-//							 new Point3(2.57853,-5.29157,0),
-//							 new Point3(-2.06362,-4.79628,0));
+//		mRefPoints.fromArray(new Point3(-1.1930, -0.1420, 0),
+//							 new Point3(-0.5676, 1.2018, 0),
+//							 new Point3(0.0343, 1.1836, 0),
+//							 new Point3(0.5793, 0.9767, 0));
 
-//		mRefPoints.fromArray(new Point3(-1.464284,0.208872,0), // X = -146.4284     Y = 20.8872      Z = 0.0000
-//							 new Point3(-0.514284,1.438872,0), // X = -51.4284      Y = 143.8872     Z = 0.0000
-//							 new Point3(0.145716,1.378872,0),  // X = 14.5716       Y = 137.8872     Z = 0.0000
-//							 new Point3(0.795716,1.018872,0)); // X = 79.5716       Y = 101.8872     Z = 0.0000
+//		mRefPoints.fromArray(new Point3(-0.9254,  -0.0745, 0),
+//				new Point3(-0.5078, 0.9318 , 0),
+//				new Point3(0.0266 , 0.8952 , 0),
+//				new Point3(0.4991 , 0.6803 , 0));
 
-//		mRefPoints.fromArray(new Point3(-1.104284,0.068872,0.012255),
-//							 new Point3(-0.514284,1.358872,0),
-//							 new Point3(0.125716,1.378872,0),
-//							 new Point3(0.695716,1.218872,0));
+//		mRefPoints.fromArray(new Point3(-0.8488, -0.0134, 0),
+//							 new Point3(-0.3989, 0.9789 , 0),
+//							 new Point3(0.1340 , 0.9250 , 0),
+//							 new Point3(0.5228 , 0.7019 , 0));
 
-		mRefPoints.fromArray(new Point3(-1.104, 0.069, 0.012),
-							 new Point3(-0.514, 1.359, 0),
-							 new Point3(0.126, 1.379, 0),
-							 new Point3(0.696, 1.219, 0));
+		mRefPoints.fromArray(new Point3(-0.7855, -0.0178, 0),
+							 new Point3(-0.3355, 0.9745 , 0),
+							 new Point3(0.1974 , 0.9206 , 0),
+							 new Point3(0.5862 , 0.6976 , 0));
 	}
 
 	public void release()
