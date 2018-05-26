@@ -27,11 +27,17 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	private int mScreenHeight = -1;
 
 	// Tracking information
-	private static final double REF_FINGER_PTS[][] = new double[][]{{-0.0200068,  0.0397161},
-																    { 0.0201293,  0.0293674},
-																    { 0.0299186,  0.0100685},
-																    { 0.0317366, -0.0064334},
-																    { 0.0230661, -0.0267112}};
+//	private static final double REF_FINGER_PTS[][] = new double[][]{{-0.0200068,  0.0397161},
+//																    { 0.0201293,  0.0293674},
+//																    { 0.0299186,  0.0100685},
+//																    { 0.0317366, -0.0064334},
+//																    { 0.0230661, -0.0267112}};
+
+	private static final double REF_FINGER_PTS[][] = new double[][]{{-0.042,  0.012},
+																	{-0.025, -0.025},
+																	{-0.004, -0.032},
+																	{ 0.010, -0.030},
+																	{ 0.030, -0.019}};
 	private static final long MAX_BAD_TRACK_FRAMES = 8;
 	private HandTracking.HandPose mHandPose;
 	private HandTracking mHandTracking;
@@ -179,8 +185,8 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 			//mvMatrix.rotate(1, 0, 0, 90);
 			//mvMatrix.scale(26);
 
-			tmp[0] = -0.042;
-			tmp[1] = 0.012;
+			tmp[0] = REF_FINGER_PTS[4][0];
+			tmp[1] = REF_FINGER_PTS[4][1];
 			tmp[2] = 0;
 			tmp[3] = 1;
 
@@ -196,7 +202,7 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 
 			// Rotate
 			Matrix.setIdentityM(tmp1, 0);
-			Matrix.setRotateM(tmp1, 0, 180, 0, 0, 1);
+			Matrix.setRotateM(tmp1, 0, 20, 0, 0, 1);
 			model.leftMultiply(new Matrix4(tmp1));
 
 			// Translate back
@@ -216,7 +222,7 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 
 			for (int i = 0, j = mLeftHandModel.getNumChildren(); i < j; ++i)
 			{
-				if (mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.022") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.016"))
+				if (mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.005") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.011") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.009"))
 				{
 					// Get current object coordinate
 //					tmp[0] = 0.0001;
