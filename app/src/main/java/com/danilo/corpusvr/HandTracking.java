@@ -90,15 +90,15 @@ public class HandTracking
 //							 new Point3(0.145716,1.378872,0),  // X = 14.5716       Y = 137.8872     Z = 0.0000
 //							 new Point3(0.795716,1.018872,0)); // X = 79.5716       Y = 101.8872     Z = 0.0000
 
-		mRefPoints.fromArray(new Point3(-1.104284,0.068872,0.012255),
-							 new Point3(-0.514284,1.358872,0),
-							 new Point3(0.125716,1.378872,0),
-							 new Point3(0.695716,1.218872,0));
-
-//		mRefPoints.fromArray(new Point3(-1.214284,0.068872,0.012255),
+//		mRefPoints.fromArray(new Point3(-1.104284,0.068872,0.012255),
 //							 new Point3(-0.514284,1.358872,0),
 //							 new Point3(0.125716,1.378872,0),
 //							 new Point3(0.695716,1.218872,0));
+
+		mRefPoints.fromArray(new Point3(-1.104, 0.069, 0.012),
+							 new Point3(-0.514, 1.359, 0),
+							 new Point3(0.126, 1.379, 0),
+							 new Point3(0.696, 1.219, 0));
 	}
 
 	public void release()

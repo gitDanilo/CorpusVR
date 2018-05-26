@@ -4,12 +4,13 @@ import android.content.Context;
 import android.graphics.Color;
 import android.view.MotionEvent;
 
-import com.example.rajawali.math.Matrix;
 import com.example.rajawali.Object3D;
 import com.example.rajawali.lights.DirectionalLight;
 import com.example.rajawali.loader.LoaderOBJ;
 import com.example.rajawali.loader.ParsingException;
 import com.example.rajawali.materials.Material;
+import com.example.rajawali.materials.methods.DiffuseMethod;
+import com.example.rajawali.math.Matrix;
 import com.example.rajawali.math.Matrix4;
 import com.example.rajawali.primitives.Sphere;
 import com.example.rajawali.renderer.Renderer;
@@ -110,14 +111,15 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 
 		// Debug object basic material (disable light so it looks 2D)
 		Material material = new Material();
-		material.enableLighting(false);
-		//material.setDiffuseMethod(new DiffuseMethod.Lambert());
+		material.enableLighting(true);
+		material.setDiffuseMethod(new DiffuseMethod.Lambert());
 		material.setColor(Color.RED);
 
 		// Debug object
-		mSphere = new Sphere(0.02f, 24, 24);
+		mSphere = new Sphere(0.002f, 24, 24);
 		mSphere.setMaterial(material);
 		getCurrentScene().addChild(mSphere);
+		mSphere.setUseCustomModelView(true);
 		mSphere.setVisible(true);
 
 		// Load OBJ and MTL files
@@ -165,9 +167,9 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 //			Matrix.scaleM(mModelMatF, 0, /*mHandPose.scale*/0.3, /*mHandPose.scale*/0.3, /*mHandPose.scale*/0.3); // Scale
 
 			// Generate Test Model Matrix
-//			double tmp[] = new double[4];
-//			double tmp1[] = new double[16];
-//			double transf[] = new double[16];
+			double tmp[] = new double[4];
+			double tmp1[] = new double[16];
+			double transf[] = new double[16];
 
 			Matrix4 tmp2 = new Matrix4(mHandPose.pose);
 			tmp2.scale(30);
@@ -178,41 +180,54 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 
 			for (int i = 0, j = mLeftHandModel.getNumChildren(); i < j; ++i)
 			{
-//				if (mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.022") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.016"))
-//				{
-//					// Get current object coordinate
-//					tmp[0] = REF_FINGER_PTS[0][0];
-//					tmp[1] = REF_FINGER_PTS[0][1];
-//					tmp[2] = 0;
-//					tmp[3] = 1;
-//					Matrix.multiplyMV(tmp, 0, mModelMatF, 0, tmp, 0);
-//
-//					// Translate to origin
+				if (mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.022") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.016"))
+				{
+					// Get current object coordinate
+					tmp[0] = 0.0001;
+					tmp[1] = 0;
+					tmp[2] = 10;
+					tmp[3] = 1;
+					Matrix.multiplyMV(tmp, 0, tmp2.getDoubleValues(), 0, tmp, 0);
+
+					Matrix.setIdentityM(tmp1, 0);
+					//0.5409334617229711, 1.1049283846825118, -24.130624956012504, 1.0
+//					System.arraycopy(tmp2.getDoubleValues(), 0, tmp1, 0, 16);
+					tmp1[12] = tmp[0];
+					tmp1[13] = tmp[1];
+					tmp1[14] = tmp[2];
+					tmp1[15] = tmp[3];
+
+
+					mSphere.getModelViewMatrix().setAll(tmp1);
+
+//					Log.d(TAG, "mSphere: (" + tmp[0] + ", " + tmp[1] + ", " + tmp[2] + ", " + tmp[3] + ")\n");
+
+					// Translate to origin
 //					Matrix.setIdentityM(transf, 0);
 //					transf[12] = -tmp[0];
 //					transf[13] = -tmp[1];
 //					transf[14] = -tmp[2];
 //					transf[15] = tmp[3];
-//
-//					// Transformation on the origin
+
+					// Transformation on the origin
 //					Matrix.setIdentityM(tmp1, 0);
 //					Matrix.setRotateM(tmp1, 0, 40, 0, 0, 1);
 //					Matrix.multiplyMM(transf, 0, tmp1, 0, transf, 0);
-//
-//					// Translate back to the original position
+
+					// Translate back to the original position
 //					Matrix.setIdentityM(tmp1, 0);
 //					tmp1[12] = tmp[0];
 //					tmp1[13] = tmp[1];
 //					tmp1[14] = tmp[2];
 //					tmp1[15] = tmp[3];
 //					Matrix.multiplyMM(transf, 0, tmp1, 0, transf, 0);
-//
-//					// Apply the parent transformation
+
+					// Apply the parent transformation
 //					Matrix.multiplyMM(transf, 0, transf, 0, mModelMatF, 0);
-//
-//					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(transf);
-//				}
-//				else
+
+					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(tmp2);
+				}
+				else
 					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(tmp2);
 			}
 		}
@@ -221,6 +236,8 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 			if (mLeftHandModel.isVisible())
 				mLeftHandModel.setVisible(false);
 		}
+
+		mLeftHandModel.setVisible(false);
 
 	}
 

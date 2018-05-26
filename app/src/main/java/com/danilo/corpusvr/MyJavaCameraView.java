@@ -50,7 +50,7 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	private static final float MAX_PALM_INNER_ANGLE = 179.0f;
 
 	// Parameters to create the camera perspective matrix
-	private static final float NEAR = 0.1f;
+	private static final float NEAR = 1f;
 	private static final float FAR = 100f;
 
 	private CameraProjectionListener mProjectionListener;
