@@ -33,35 +33,41 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 //																    { 0.0317366, -0.0064334},
 //																    { 0.0230661, -0.0267112}};
 
+	private int mBoneFingerIndex[];
+	private HandTracking.HandPose mHandPose;
+	private HandTracking mHandTracking;
+	private long mBadTrackFramesCount;
+	private static final long MAX_BAD_TRACK_FRAMES = 8;
 	private static final double REF_FINGER_PTS[][] = new double[][]{{-0.042,  0.012},
 																	{-0.025, -0.025},
 																	{-0.004, -0.032},
 																	{ 0.010, -0.030},
 																	{ 0.030, -0.019}};
-	private static final long MAX_BAD_TRACK_FRAMES = 8;
-	private HandTracking.HandPose mHandPose;
-	private HandTracking mHandTracking;
-	private long mBadTrackFramesCount;
-	private double mAngle;
-	// Matrices
-	//private float[] mModelMatTest;
+	private static final String FINGER_BONE_NAMES[][] = new String[][]{{"ANATOMY---HAND-AND-ARM-BONES.022", "ANATOMY---HAND-AND-ARM-BONES.016", ""                                },
+																	   {"ANATOMY---HAND-AND-ARM-BONES.018", "ANATOMY---HAND-AND-ARM-BONES.013", "ANATOMY---HAND-AND-ARM-BONES.015"},
+																	   {"ANATOMY---HAND-AND-ARM-BONES.019", "ANATOMY---HAND-AND-ARM-BONES.014", "ANATOMY---HAND-AND-ARM-BONES"    },
+																	   {"ANATOMY---HAND-AND-ARM-BONES.020", "ANATOMY---HAND-AND-ARM-BONES.017", "ANATOMY---HAND-AND-ARM-BONES.026"},
+																	   {"ANATOMY---HAND-AND-ARM-BONES.009", "ANATOMY---HAND-AND-ARM-BONES.011", "ANATOMY---HAND-AND-ARM-BONES.005"}};
 
+	// Matrices
 	private double[] mModelMatF;
 	private Matrix4 mProjMat;
-	private Matrix4  mMVPInvMat;
-	//private float[] mViewMatrix = new float[]{1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, 0, 1.0f, 0, 0, 0, -4.0f, 1.0f}; // default ViewMatrix from OpenGL Renderer
+	private Matrix4 mMVPInvMat;
+	private Matrix4 mTempTransf;
+	private Matrix4 mTempViewMat;
+	private Matrix4 mTempModelMat;
+	private Matrix4 mPalmModeViewMat;
+	private Matrix4 mFingerModelViewMat[];
 
 	// Scene objects
 	private DirectionalLight mDirectionalLight;
 	private Sphere mSphere;
-
-	//private Object3D mHandObjList[][];
 	private Object3D mLeftHandModel;
 	private Object3D mRightHandModel;
 
 	// https://stackoverflow.com/questions/7692988/opengl-math-projecting-screen-space-to-world-space-coords
-	// Converts the coordinates from OpenCV space to OpenGL's
-	private void ScreenToWorld(Point point)
+	// Converts the coordinates from OpenCV space to OpenGL's (Used for 2D perspective)
+	private void screenToWorld(Point point)
 	{
 		if (mScreenWidth == -1 || mScreenHeight == -1)
 			return;
@@ -89,6 +95,68 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 		mModelMatF[15] = 1;
 	}
 
+	private void calculateFingerTransf(Matrix4 palmPose)
+	{
+		for (int i = 0; i < 5; ++i)
+		{
+//			tmp[0] = REF_FINGER_PTS[i][0];
+//			tmp[1] = REF_FINGER_PTS[i][1];
+//			tmp[2] = 0;
+//			tmp[3] = 1;
+			mTempModelMat.identity();
+
+			// Translate to the origin
+			mTempTransf.identity().setTranslation(- REF_FINGER_PTS[i][0], - REF_FINGER_PTS[i][1], 0);
+			mTempModelMat.identity().leftMultiply(mTempTransf);
+//			Matrix.setIdentityM(transf, 0);
+//			transf[12] = - tmp[0];
+//			transf[13] = - tmp[1];
+//			transf[14] = - tmp[2];
+//			transf[15] = tmp[3];
+//			modelMatrix.leftMultiply(new Matrix4(transf));
+
+			// Rotate fingers on Z axis
+			mTempTransf.identity().setToRotation(0,0,1, mHandPose.fingerAngles[i]);
+			mTempModelMat.identity().leftMultiply(mTempTransf);
+//			Matrix.setIdentityM(transf, 0);
+//			Matrix.setRotateM(transf, 0, mHandPose.fingerAngles[i], 0, 0, 1);
+//			modelMatrix.leftMultiply(new Matrix4(transf));
+
+			// Translate back
+			mTempTransf.identity().setTranslation(REF_FINGER_PTS[i][0], REF_FINGER_PTS[i][1], 0);
+			mTempModelMat.identity().leftMultiply(mTempTransf);
+//			Matrix.setIdentityM(transf, 0);
+//			transf[12] = tmp[0];
+//			transf[13] = tmp[1];
+//			transf[14] = tmp[2];
+//			transf[15] = tmp[3];
+//			modelMatrix.leftMultiply(new Matrix4(transf));
+
+			// Apply palm pose transformations
+			mTempViewMat.identity().inverse();
+			mTempViewMat.leftMultiply(palmPose);
+
+			// Generate the finger ModelView Matrix
+			mFingerModelViewMat[i].setAll(mTempViewMat).multiply(mTempModelMat);
+		}
+	}
+
+	private int getFingerIndex(String modelName)
+	{
+		int i, j;
+		for (i = 0; i < FINGER_BONE_NAMES.length; ++i)
+		{
+			for (j = 0; j < FINGER_BONE_NAMES[0].length; ++j)
+			{
+				if (modelName.equals(FINGER_BONE_NAMES[i][j]))
+				{
+					return i;
+				}
+			}
+		}
+		return -1;
+	}
+
 	MyRenderer(Context context, HandTracking Status)
 	{
 		super(context);
@@ -106,8 +174,19 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 		if (mProjMat != null)
 			getCurrentCamera().setProjectionMatrix(mProjMat);
 
-		//mModelMatTest = new float[16];
 		mModelMatF = new double[16];
+
+		mTempTransf = new Matrix4();
+		mFingerModelViewMat = new Matrix4[5];
+		mFingerModelViewMat[0].identity();
+		mFingerModelViewMat[1].identity();
+		mFingerModelViewMat[2].identity();
+		mFingerModelViewMat[3].identity();
+		mFingerModelViewMat[4].identity();
+
+		mTempViewMat = new Matrix4();
+		mTempModelMat = new Matrix4();
+		mPalmModeViewMat = new Matrix4();
 
 		// Scene basic light
 		mDirectionalLight = new DirectionalLight(4, 4, 4);
@@ -140,14 +219,19 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 		}
 		mLeftHandModel = loaderOBJ.getParsedObject();
 		getCurrentScene().addChild(mLeftHandModel);
-		for (int i = 0, j = mLeftHandModel.getNumChildren(); i < j; ++i)
+
+		int i, j = mLeftHandModel.getNumChildren();
+		mBoneFingerIndex = new int[j];
+		for (i = 0; i < j; ++i)
+		{
 			mLeftHandModel.getChildAt(i).setUseCustomModelView(true);
+			mBoneFingerIndex[i] = getFingerIndex(mLeftHandModel.getChildAt(i).getName());
+		}
 		mLeftHandModel.setVisible(false);
 
 		//	mLeftHandModel.setMaterial(material); Its possible to remove the loaded material and change for a new one: https://github.com/Rajawali/Rajawali/issues/2015
 
 		mBadTrackFramesCount = MAX_BAD_TRACK_FRAMES;
-		mAngle = 0;
 	}
 
 	@Override
@@ -166,101 +250,23 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 			if (!mLeftHandModel.isVisible())
 				mLeftHandModel.setVisible(true);
 
-			// Generate Test Model Matrix
-			double tmp[] = new double[4];
-			double tmp1[] = new double[16];
-			double transf[] = new double[16];
+			mPalmModeViewMat.setAll(mHandPose.pose);
+			mPalmModeViewMat.scale(25);
+			mPalmModeViewMat.rotate(1, 0, 0, -20);
 
-			Matrix4 mvMatrix = new Matrix4(mHandPose.pose);
-			mvMatrix.scale(25);
-			mvMatrix.rotate(1, 0, 0, -20);
+			calculateFingerTransf(mPalmModeViewMat);
 
-			tmp[0] = REF_FINGER_PTS[3][0];
-			tmp[1] = REF_FINGER_PTS[3][1];
-			tmp[2] = 0;
-			tmp[3] = 1;
-
-			Matrix4 model = new Matrix4();
-
-			// Translate to the origin
-			Matrix.setIdentityM(tmp1, 0);
-			tmp1[12] = - tmp[0];
-			tmp1[13] = - tmp[1];
-			tmp1[14] = - tmp[2];
-			tmp1[15] = tmp[3];
-			model.leftMultiply(new Matrix4(tmp1));
-
-			// Rotate
-			Matrix.setIdentityM(tmp1, 0);
-			Matrix.setRotateM(tmp1, 0, mHandPose.fingerAngles[3], 0, 0, 1);
-			model.leftMultiply(new Matrix4(tmp1));
-
-			// Translate back
-			Matrix.setIdentityM(tmp1, 0);
-			tmp1[12] = tmp[0];
-			tmp1[13] = tmp[1];
-			tmp1[14] = tmp[2];
-			tmp1[15] = tmp[3];
-			model.leftMultiply(new Matrix4(tmp1));
-
-			Matrix4 view = new Matrix4();
-			view.inverse();
-			view.leftMultiply(mvMatrix);
-
-			Matrix4 newMV = new Matrix4(view);
-			newMV.multiply(model);
-
-			for (int i = 0, j = mLeftHandModel.getNumChildren(); i < j; ++i)
+			for (int i = 0, j = mLeftHandModel.getNumChildren(), fingerIndex; i < j; ++i)
 			{
-				if (mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.026") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.017") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.020"))
+				fingerIndex = mBoneFingerIndex[i];
+				if (fingerIndex != -1) // Finger bone
 				{
-					// Get current object coordinate
-//					tmp[0] = 0.0001;
-//					tmp[1] = 0;
-//					tmp[2] = 10;
-//					tmp[3] = 1;
-//					Matrix.multiplyMV(tmp, 0, tmp2.getDoubleValues(), 0, tmp, 0);
-
-//					Matrix.setIdentityM(tmp1, 0);
-					//0.5409334617229711, 1.1049283846825118, -24.130624956012504, 1.0
-//					System.arraycopy(tmp2.getDoubleValues(), 0, tmp1, 0, 16);
-//					tmp1[12] = tmp[0];
-//					tmp1[13] = tmp[1];
-//					tmp1[14] = tmp[2];
-//					tmp1[15] = tmp[3];
-
-
-//					mSphere.getModelViewMatrix().setAll(tmp1);
-
-//					Log.d(TAG, "mSphere: (" + tmp[0] + ", " + tmp[1] + ", " + tmp[2] + ", " + tmp[3] + ")\n");
-
-					// Translate to origin
-//					Matrix.setIdentityM(transf, 0);
-//					transf[12] = -tmp[0];
-//					transf[13] = -tmp[1];
-//					transf[14] = -tmp[2];
-//					transf[15] = tmp[3];
-
-					// Transformation on the origin
-//					Matrix.setIdentityM(tmp1, 0);
-//					Matrix.setRotateM(tmp1, 0, 40, 0, 0, 1);
-//					Matrix.multiplyMM(transf, 0, tmp1, 0, transf, 0);
-
-					// Translate back to the original position
-//					Matrix.setIdentityM(tmp1, 0);
-//					tmp1[12] = tmp[0];
-//					tmp1[13] = tmp[1];
-//					tmp1[14] = tmp[2];
-//					tmp1[15] = tmp[3];
-//					Matrix.multiplyMM(transf, 0, tmp1, 0, transf, 0);
-
-					// Apply the parent transformation
-//					Matrix.multiplyMM(transf, 0, transf, 0, mModelMatF, 0);
-
-					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(newMV);
+					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(mFingerModelViewMat[fingerIndex]);
 				}
-				else
-					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(mvMatrix);
+				else // Palm bone
+				{
+					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(mPalmModeViewMat);
+				}
 			}
 		}
 		else
