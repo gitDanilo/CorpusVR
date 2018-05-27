@@ -99,38 +99,19 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	{
 		for (int i = 0; i < 5; ++i)
 		{
-//			tmp[0] = REF_FINGER_PTS[i][0];
-//			tmp[1] = REF_FINGER_PTS[i][1];
-//			tmp[2] = 0;
-//			tmp[3] = 1;
 			mTempModelMat.identity();
 
 			// Translate to the origin
 			mTempTransf.identity().setTranslation(- REF_FINGER_PTS[i][0], - REF_FINGER_PTS[i][1], 0);
-			mTempModelMat.identity().leftMultiply(mTempTransf);
-//			Matrix.setIdentityM(transf, 0);
-//			transf[12] = - tmp[0];
-//			transf[13] = - tmp[1];
-//			transf[14] = - tmp[2];
-//			transf[15] = tmp[3];
-//			modelMatrix.leftMultiply(new Matrix4(transf));
+			mTempModelMat.leftMultiply(mTempTransf);
 
 			// Rotate fingers on Z axis
-			mTempTransf.identity().setToRotation(0,0,1, mHandPose.fingerAngles[i]);
-			mTempModelMat.identity().leftMultiply(mTempTransf);
-//			Matrix.setIdentityM(transf, 0);
-//			Matrix.setRotateM(transf, 0, mHandPose.fingerAngles[i], 0, 0, 1);
-//			modelMatrix.leftMultiply(new Matrix4(transf));
+			mTempTransf.identity().setRotate(0,0,1, mHandPose.fingerAngles[i]);
+			mTempModelMat.leftMultiply(mTempTransf);
 
 			// Translate back
 			mTempTransf.identity().setTranslation(REF_FINGER_PTS[i][0], REF_FINGER_PTS[i][1], 0);
-			mTempModelMat.identity().leftMultiply(mTempTransf);
-//			Matrix.setIdentityM(transf, 0);
-//			transf[12] = tmp[0];
-//			transf[13] = tmp[1];
-//			transf[14] = tmp[2];
-//			transf[15] = tmp[3];
-//			modelMatrix.leftMultiply(new Matrix4(transf));
+			mTempModelMat.leftMultiply(mTempTransf);
 
 			// Apply palm pose transformations
 			mTempViewMat.identity().inverse();
@@ -178,11 +159,11 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 
 		mTempTransf = new Matrix4();
 		mFingerModelViewMat = new Matrix4[5];
-		mFingerModelViewMat[0].identity();
-		mFingerModelViewMat[1].identity();
-		mFingerModelViewMat[2].identity();
-		mFingerModelViewMat[3].identity();
-		mFingerModelViewMat[4].identity();
+		mFingerModelViewMat[0] = new Matrix4();
+		mFingerModelViewMat[1] = new Matrix4();
+		mFingerModelViewMat[2] = new Matrix4();
+		mFingerModelViewMat[3] = new Matrix4();
+		mFingerModelViewMat[4] = new Matrix4();
 
 		mTempViewMat = new Matrix4();
 		mTempModelMat = new Matrix4();
@@ -251,8 +232,6 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 				mLeftHandModel.setVisible(true);
 
 			mPalmModeViewMat.setAll(mHandPose.pose);
-			mPalmModeViewMat.scale(25);
-			mPalmModeViewMat.rotate(1, 0, 0, -20);
 
 			calculateFingerTransf(mPalmModeViewMat);
 

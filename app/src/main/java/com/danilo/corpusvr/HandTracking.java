@@ -1,6 +1,7 @@
 package com.danilo.corpusvr;
 
 import com.example.rajawali.math.MathUtil;
+import com.example.rajawali.math.Matrix;
 
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
@@ -26,7 +27,8 @@ public class HandTracking
 {
 	private static final String TAG = "HandTracking";
 
-	private static final float DELTA_SCALE = 0.016f;
+	private static final double POSE_SC_COMP    = 25;
+	private static final double POSE_X_ROT_COMP = 20.0;
 
 	private static final float MAX_DISTANCE = 99999.0f;
 	private static final float DELTA_LENGTH = 0.8f; // 0.7f
@@ -261,6 +263,9 @@ public class HandTracking
 					mHandPoseTemp.pose[13] = - tVecArray[1];
 					mHandPoseTemp.pose[14] = - tVecArray[2];
 					mHandPoseTemp.pose[15] = 1;
+
+					Matrix.scaleM(mHandPoseTemp.pose, 0, POSE_SC_COMP, POSE_SC_COMP, POSE_SC_COMP);
+					Matrix.rotateM(mHandPoseTemp.pose, 0, POSE_X_ROT_COMP, 1, 0, 0);
 
 					// Calculate finger angles
 					// https://stackoverflow.com/questions/15022630/how-to-calculate-the-angle-from-rotation-matrix

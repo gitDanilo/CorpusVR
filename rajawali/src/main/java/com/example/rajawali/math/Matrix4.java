@@ -907,6 +907,12 @@ public final class Matrix4 implements Cloneable {
         return this;
     }
 
+    public Matrix4 setRotate(double x, double y, double z, double angle)
+    {
+        Matrix.setRotateM(m, 0, angle, x, y, z);
+        return this;
+    }
+
     /**
      * Sets this {@link Matrix4} to the specified rotation around the specified axis.
      *
