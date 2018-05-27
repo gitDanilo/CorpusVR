@@ -1,5 +1,7 @@
 package com.danilo.corpusvr;
 
+import com.example.rajawali.math.MathUtil;
+
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -40,6 +42,11 @@ public class HandTracking
 	private static final Scalar COLOR_BLUE = new Scalar(0, 0, 255);
 	private static final Scalar COLOR_YELLOW = new Scalar(255, 255, 0);
 	private static final Scalar COLOR_PINK = new Scalar(255, 0, 255);
+	private static final double[] DEF_FINGER_ANGLES = new double[] {2.302089,
+																	1.478468,
+																	1.427679,
+																	1.326974,
+																	1.128181};
 
 	private Semaphore mSemaphore;
 	private HandPose mHandPose;
@@ -49,6 +56,7 @@ public class HandTracking
 	private MatOfPoint2f mPalmPointsMat;
 	private MatOfPoint mIntPalmPointsMat;
 	private float d[];
+	private int mFingerIndices[];
 	private MatOfPoint3f mRefPoints;
 	private MatOfDouble mDistCoeffs;
 	private MatOfDouble mRVec;
@@ -63,6 +71,7 @@ public class HandTracking
 		mHandDefectsList = new ArrayList<>(MAX_HAND_DEFECTS);
 		mPalmPoints = new ArrayList<>(MAX_HAND_DEFECTS + 1);
 		d = new float[3];
+		mFingerIndices = new int[5];
 	}
 
 	public void init()
@@ -76,15 +85,16 @@ public class HandTracking
 		mRotation = new MatOfDouble();
 
 		// Reference points
+
 //		mRefPoints.fromArray(new Point3(-1.1930, -0.1420, 0),
 //							 new Point3(-0.5676, 1.2018, 0),
 //							 new Point3(0.0343, 1.1836, 0),
 //							 new Point3(0.5793, 0.9767, 0));
 
 //		mRefPoints.fromArray(new Point3(-0.9254,  -0.0745, 0),
-//				new Point3(-0.5078, 0.9318 , 0),
-//				new Point3(0.0266 , 0.8952 , 0),
-//				new Point3(0.4991 , 0.6803 , 0));
+//							 new Point3(-0.5078, 0.9318 , 0),
+//							 new Point3(0.0266 , 0.8952 , 0),
+//							 new Point3(0.4991 , 0.6803 , 0));
 
 //		mRefPoints.fromArray(new Point3(-0.8488, -0.0134, 0),
 //							 new Point3(-0.3989, 0.9789 , 0),
@@ -185,41 +195,36 @@ public class HandTracking
 				int prev_index_2 = prev_index == 0 ? size - 1 : prev_index - 1;
 				int next_index_2 = (next_index + 1) % size;
 
-				float distList[] = new float[3];
-				distList[0] = distanceP2P(mHandDefectsList.get(prev_index).farthestPoint, mHandDefectsList.get(prev_index_2).farthestPoint);
-				distList[1] = distanceP2P(mHandDefectsList.get(next_index).farthestPoint, mHandDefectsList.get(next_index_2).farthestPoint);
+				float dist1 = distanceP2P(mHandDefectsList.get(prev_index).farthestPoint, mHandDefectsList.get(prev_index_2).farthestPoint);
+				float dist2 = distanceP2P(mHandDefectsList.get(next_index).farthestPoint, mHandDefectsList.get(next_index_2).farthestPoint);
 
-				boolean right_model;
 				// Locate thumb
-				if (distList[0] > distList[1])
+				boolean right_model;
+				if (dist1 > dist2)
 				{
 					right_model = false;
-				}
-				else
-				{
-					right_model = true;
-				}
-
-				// Draw
-//				int i, j = mPalmPoints.size();
-//				for (i = 0; i < j; ++i)
-//				{
-//					Imgproc.circle(rgba, mPalmPoints.get(i), 4, COLOR_RED, 2);
-//				}
-
-				if (right_model)
-				{
-					mPalmPointsMat.fromArray(mHandDefectsList.get(prev_index_2).farthestPoint,
-											 mHandDefectsList.get(prev_index).farthestPoint,
-											 mHandDefectsList.get(index).farthestPoint,
-											 mHandDefectsList.get(next_index).farthestPoint);
-				}
-				else
-				{
 					mPalmPointsMat.fromArray(mHandDefectsList.get(next_index_2).farthestPoint,
 											 mHandDefectsList.get(next_index).farthestPoint,
 											 mHandDefectsList.get(index).farthestPoint,
 											 mHandDefectsList.get(prev_index).farthestPoint);
+					mFingerIndices[0] = next_index_2;
+					mFingerIndices[1] = next_index_2;
+					mFingerIndices[2] = next_index;
+					mFingerIndices[3] = index;
+					mFingerIndices[4] = prev_index;
+				}
+				else
+				{
+					right_model = true;
+					mPalmPointsMat.fromArray(mHandDefectsList.get(prev_index_2).farthestPoint,
+											 mHandDefectsList.get(prev_index).farthestPoint,
+											 mHandDefectsList.get(index).farthestPoint,
+											 mHandDefectsList.get(next_index).farthestPoint);
+					mFingerIndices[0] = prev_index_2;
+					mFingerIndices[1] = prev_index_2;
+					mFingerIndices[2] = prev_index;
+					mFingerIndices[3] = index;
+					mFingerIndices[4] = next_index;
 				}
 
 				mPalmPointsMat.convertTo(mIntPalmPointsMat, CvType.CV_32S);
@@ -256,6 +261,28 @@ public class HandTracking
 					mHandPoseTemp.pose[13] = - tVecArray[1];
 					mHandPoseTemp.pose[14] = - tVecArray[2];
 					mHandPoseTemp.pose[15] = 1;
+
+					// Calculate finger angles
+					// https://stackoverflow.com/questions/15022630/how-to-calculate-the-angle-from-rotation-matrix
+					double palmRotation = Math.atan2(mHandPoseTemp.pose[4], mHandPoseTemp.pose[0]);
+
+					mHandPoseTemp.fingerAngles[0] = arcTang(mHandDefectsList.get(mFingerIndices[0]).farthestPoint,
+															right_model ?
+															mHandDefectsList.get(mFingerIndices[0]).startPoint :
+															mHandDefectsList.get(mFingerIndices[0]).endPoint);
+					mHandPoseTemp.fingerAngles[0] -= palmRotation;
+					mHandPoseTemp.fingerAngles[0] -= DEF_FINGER_ANGLES[0];
+					mHandPoseTemp.fingerAngles[0] *= -MathUtil.PRE_180_DIV_PI;
+					for (int i = 1, j = mHandPoseTemp.fingerAngles.length; i < j; ++i)
+					{
+						mHandPoseTemp.fingerAngles[i] = arcTang(mHandDefectsList.get(mFingerIndices[i]).farthestPoint,
+																right_model ?
+																mHandDefectsList.get(mFingerIndices[i]).endPoint :
+																mHandDefectsList.get(mFingerIndices[i]).startPoint);
+						mHandPoseTemp.fingerAngles[i] -= palmRotation;
+						mHandPoseTemp.fingerAngles[i] -= DEF_FINGER_ANGLES[i];
+						mHandPoseTemp.fingerAngles[i] *= -MathUtil.PRE_180_DIV_PI;
+					}
 				}
 			}
 		}

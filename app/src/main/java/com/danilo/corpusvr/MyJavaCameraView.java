@@ -3,6 +3,8 @@ package com.danilo.corpusvr;
 import android.content.Context;
 import android.opengl.Matrix;
 
+import com.example.rajawali.math.MathUtil;
+
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
 import org.opencv.core.Core;
@@ -124,7 +126,8 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 
 		// https://www.mathsisfun.com/algebra/trig-cosine-law.html (The Law of Cosines)
 		double A = Math.acos((CBx * CAx + CBy * CAy) / (Math.sqrt(CBx * CBx + CBy * CBy) * Math.sqrt(CAx * CAx + CAy * CAy)));    // (a² + b² − c²) / 2
-		return (A * 180) / PI;
+		return A * MathUtil.PRE_180_DIV_PI;
+
 	}
 
 	public MatOfDouble getIntrinsicParam()
@@ -177,42 +180,13 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		mBinMat = new Mat(height, width, CvType.CV_8UC1);
 		mFOVX = mCamera.getParameters().getHorizontalViewAngle();
 		mFOVY = mCamera.getParameters().getVerticalViewAngle();
-		//  mMask  = new Mat(height, width, CvType.CV_8UC4);
-		//  mMask1 = new Mat(height, width, CvType.CV_8UC4);
-		//  mMask2 = new Mat(height, width, CvType.CV_8UC4);
 		mHierarchy = new Mat();
-		//  Detection For Red Color
-		//  mMinHSV1 = new Scalar(0, 70, 50);
-		//  mMaxHSV1 = new Scalar(10, 255, 255);
-		//  mMinHSV2 = new Scalar(170, 70, 50);
-		//  mMaxHSV2 = new Scalar(180, 255, 255);
 		mMinHSV1 = new Scalar(0, 20, 60); // 0, 20, 60
 		mMaxHSV1 = new Scalar(20, 150, 255); // 20, 150, 255
-		//  mIntSceneCorners = new MatOfPoint();
-		//  mSceneCorners = new Mat(4, 1, CvType.CV_32FC2);
 		mListOfContours = new ArrayList<>();
 		mHull = new MatOfInt();
 		mDefects = new MatOfInt4();
 		mHandDefect = new HandTracking.HandDefect();
-//		mFitLineMat = new Mat(4, 1, CvType.CV_32FC1);
-//		mFitLine = new float[4];
-//		mObjBBCenter = new Point();
-//		mStartPt = new Point();
-//		mEndPt = new Point();
-//		mFarthestPt = new Point();
-//		mStartFitLine = new Point();
-//		mEndFitLine = new Point();
-		//  mSceneCorners2D = new MatOfPoint2f();
-		//  mReferenceCorners3D = new MatOfPoint3f();
-		//  mDistCoeffs = new MatOfDouble(0.0, 0.0, 0.0, 0.0); // Assume no distortion
-		//  mRVec = new MatOfDouble();
-		//  mTVec = new MatOfDouble();
-		//  mRotation = new MatOfDouble();
-		//  mReferenceCorners3D.fromArray(
-		//  		new Point3(-5, -5, 0.0),
-		//  		new Point3( 5, -5, 0.0),
-		//  		new Point3( 5,  5, 0.0),
-		//  		new Point3(-5,  5, 0.0));
 
 //		Size elementSize = new Size(2 * ELEMENT_SIZE + 1, 2 * ELEMENT_SIZE + 1);
 //		Point elementPoint = new Point(ELEMENT_SIZE, ELEMENT_SIZE);

@@ -166,12 +166,6 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 			if (!mLeftHandModel.isVisible())
 				mLeftHandModel.setVisible(true);
 
-			// Generate Model Matrix of the hand
-//			Matrix.setIdentityM(mModelMatF, 0);
-//			ScreenToWorld(mHandPose.start); // Translation
-			//Matrix.rotateM(mModelMatF, 0, /*mHandPose.angle*/170, 0, 0, 1); // Rotation
-//			Matrix.scaleM(mModelMatF, 0, /*mHandPose.scale*/0.3, /*mHandPose.scale*/0.3, /*mHandPose.scale*/0.3); // Scale
-
 			// Generate Test Model Matrix
 			double tmp[] = new double[4];
 			double tmp1[] = new double[16];
@@ -180,13 +174,9 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 			Matrix4 mvMatrix = new Matrix4(mHandPose.pose);
 			mvMatrix.scale(25);
 			mvMatrix.rotate(1, 0, 0, -20);
-//			mvMatrix.rotate(1, 0, 0, -26);
-			//mvMatrix.rotate(0, 0, 1, 45);
-			//mvMatrix.rotate(1, 0, 0, 90);
-			//mvMatrix.scale(26);
 
-			tmp[0] = REF_FINGER_PTS[4][0];
-			tmp[1] = REF_FINGER_PTS[4][1];
+			tmp[0] = REF_FINGER_PTS[3][0];
+			tmp[1] = REF_FINGER_PTS[3][1];
 			tmp[2] = 0;
 			tmp[3] = 1;
 
@@ -202,7 +192,7 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 
 			// Rotate
 			Matrix.setIdentityM(tmp1, 0);
-			Matrix.setRotateM(tmp1, 0, 20, 0, 0, 1);
+			Matrix.setRotateM(tmp1, 0, mHandPose.fingerAngles[3], 0, 0, 1);
 			model.leftMultiply(new Matrix4(tmp1));
 
 			// Translate back
@@ -222,7 +212,7 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 
 			for (int i = 0, j = mLeftHandModel.getNumChildren(); i < j; ++i)
 			{
-				if (mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.005") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.011") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.009"))
+				if (mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.026") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.017") || mLeftHandModel.getChildAt(i).getName().equals("ANATOMY---HAND-AND-ARM-BONES.020"))
 				{
 					// Get current object coordinate
 //					tmp[0] = 0.0001;
@@ -278,8 +268,6 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 			if (mLeftHandModel.isVisible())
 				mLeftHandModel.setVisible(false);
 		}
-
-//		mLeftHandModel.setVisible(false);
 	}
 
 	@Override
