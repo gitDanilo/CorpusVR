@@ -179,7 +179,7 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 
 			Matrix4 mvMatrix = new Matrix4(mHandPose.pose);
 			mvMatrix.scale(25);
-//			mvMatrix.rotate(0, 1, 0, 20);
+			mvMatrix.rotate(1, 0, 0, -20);
 //			mvMatrix.rotate(1, 0, 0, -26);
 			//mvMatrix.rotate(0, 0, 1, 45);
 			//mvMatrix.rotate(1, 0, 0, 90);

@@ -1,13 +1,16 @@
 package com.danilo.corpusvr;
 
 import org.opencv.calib3d.Calib3d;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
 import org.opencv.core.Point3;
 import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,17 +47,13 @@ public class HandTracking
 	private List<HandDefect> mHandDefectsList;
 	private List<Point> mPalmPoints;
 	private MatOfPoint2f mPalmPointsMat;
+	private MatOfPoint mIntPalmPointsMat;
 	private float d[];
-	private Point mPalmPoint;
-	private Point mMidPoint;
-	private float mPalmRadius;
-	private Point mPalmCenter;
 	private MatOfPoint3f mRefPoints;
 	private MatOfDouble mDistCoeffs;
 	private MatOfDouble mRVec;
 	private MatOfDouble mTVec;
 	private MatOfDouble mRotation;
-	//private List<Integer> mRedPoints;
 
 	public HandTracking()
 	{
@@ -64,14 +63,12 @@ public class HandTracking
 		mHandDefectsList = new ArrayList<>(MAX_HAND_DEFECTS);
 		mPalmPoints = new ArrayList<>(MAX_HAND_DEFECTS + 1);
 		d = new float[3];
-		mPalmPoint = new Point();
-		mMidPoint = new Point();
-		mPalmCenter = new Point();
 	}
 
 	public void init()
 	{
 		mPalmPointsMat = new MatOfPoint2f();
+		mIntPalmPointsMat = new MatOfPoint();
 		mRefPoints = new MatOfPoint3f();
 		mDistCoeffs = new MatOfDouble(0, 0, 0, 0); // Assume no distortion
 		mRVec = new MatOfDouble();
@@ -105,6 +102,7 @@ public class HandTracking
 		mHandDefectsList.clear();
 		mPalmPoints.clear();
 		mPalmPointsMat.release();
+		mIntPalmPointsMat.release();
 		mRefPoints.release();
 		mDistCoeffs.release();
 		mRVec.release();
@@ -209,19 +207,12 @@ public class HandTracking
 //					Imgproc.circle(rgba, mPalmPoints.get(i), 4, COLOR_RED, 2);
 //				}
 
-//				Imgproc.isContourConvex();
-
 				if (right_model)
 				{
 					mPalmPointsMat.fromArray(mHandDefectsList.get(prev_index_2).farthestPoint,
 											 mHandDefectsList.get(prev_index).farthestPoint,
 											 mHandDefectsList.get(index).farthestPoint,
 											 mHandDefectsList.get(next_index).farthestPoint);
-
-//					Log.d(TAG, "thumb : " + mHandDefectsList.get(prev_index_2).farthestPoint);
-//					Log.d(TAG, "index : " + mHandDefectsList.get(prev_index).farthestPoint);
-//					Log.d(TAG, "middle: " + mHandDefectsList.get(index).farthestPoint);
-//					Log.d(TAG, "ring  : " + mHandDefectsList.get(next_index).farthestPoint);
 				}
 				else
 				{
@@ -231,37 +222,41 @@ public class HandTracking
 											 mHandDefectsList.get(prev_index).farthestPoint);
 				}
 
-				// Find the hand's Euler angles and coordinates
-				Calib3d.solvePnP(mRefPoints, mPalmPointsMat, intrinsicParam, mDistCoeffs, mRVec, mTVec);
+				mPalmPointsMat.convertTo(mIntPalmPointsMat, CvType.CV_32S);
+				if (Imgproc.isContourConvex(mIntPalmPointsMat))
+				{
+					// Find the hand's Euler angles and coordinates
+					Calib3d.solvePnP(mRefPoints, mPalmPointsMat, intrinsicParam, mDistCoeffs, mRVec, mTVec);
 
-				double[] rVecArray = mRVec.toArray();
-				rVecArray[0] *= -1.0; // Inverted X angle
-				mRVec.fromArray(rVecArray);
+					double[] rVecArray = mRVec.toArray();
+					rVecArray[0] *= -1.0; // Inverted X angle
+					mRVec.fromArray(rVecArray);
 
-				// Convert the Euler angles to 3x3 matrix
-				Calib3d.Rodrigues(mRVec, mRotation);
+					// Convert the Euler angles to 3x3 matrix
+					Calib3d.Rodrigues(mRVec, mRotation);
 
-				double[] tVecArray = mTVec.toArray();
+					double[] tVecArray = mTVec.toArray();
 
-				mHandPoseTemp.render = true;
-				mHandPoseTemp.right_model = right_model;
+					mHandPoseTemp.render = true;
+					mHandPoseTemp.right_model = right_model;
 
-				mHandPoseTemp.pose[0] = mRotation.get(0,0)[0];
-				mHandPoseTemp.pose[1] = mRotation.get(0,1)[0];
-				mHandPoseTemp.pose[2] = mRotation.get(0,2)[0];
-				mHandPoseTemp.pose[3] = 0;
-				mHandPoseTemp.pose[4] = mRotation.get(1,0)[0];
-				mHandPoseTemp.pose[5] = mRotation.get(1,1)[0];
-				mHandPoseTemp.pose[6] = mRotation.get(1,2)[0];
-				mHandPoseTemp.pose[7] = 0;
-				mHandPoseTemp.pose[8] = mRotation.get(2,0)[0];
-				mHandPoseTemp.pose[9] = mRotation.get(2,1)[0];
-				mHandPoseTemp.pose[10] = mRotation.get(2,2)[0];
-				mHandPoseTemp.pose[11] = 0;
-				mHandPoseTemp.pose[12] = tVecArray[0];
-				mHandPoseTemp.pose[13] = - tVecArray[1];
-				mHandPoseTemp.pose[14] = - tVecArray[2];
-				mHandPoseTemp.pose[15] = 1;
+					mHandPoseTemp.pose[0] = mRotation.get(0,0)[0];
+					mHandPoseTemp.pose[1] = mRotation.get(0,1)[0];
+					mHandPoseTemp.pose[2] = mRotation.get(0,2)[0];
+					mHandPoseTemp.pose[3] = 0;
+					mHandPoseTemp.pose[4] = mRotation.get(1,0)[0];
+					mHandPoseTemp.pose[5] = mRotation.get(1,1)[0];
+					mHandPoseTemp.pose[6] = mRotation.get(1,2)[0];
+					mHandPoseTemp.pose[7] = 0;
+					mHandPoseTemp.pose[8] = mRotation.get(2,0)[0];
+					mHandPoseTemp.pose[9] = mRotation.get(2,1)[0];
+					mHandPoseTemp.pose[10] = mRotation.get(2,2)[0];
+					mHandPoseTemp.pose[11] = 0;
+					mHandPoseTemp.pose[12] = tVecArray[0];
+					mHandPoseTemp.pose[13] = - tVecArray[1];
+					mHandPoseTemp.pose[14] = - tVecArray[2];
+					mHandPoseTemp.pose[15] = 1;
+				}
 			}
 		}
 		mHandDefectsList.clear();
@@ -325,10 +320,7 @@ public class HandTracking
 		public boolean render;
 		public boolean right_model;
 		public double pose[];
-		public Point start;
-		public float angle;
-		public float scale;
-		public float fingerAngles[];
+		public double fingerAngles[];
 
 		@Override
 		public boolean copyFrom(Duplicable obj)
@@ -338,10 +330,6 @@ public class HandTracking
 				HandPose tmp = (HandPose) obj;
 				render = tmp.render;
 				right_model = tmp.right_model;
-				start.x = tmp.start.x;
-				start.y = tmp.start.y;
-				angle = tmp.angle;
-				scale = tmp.scale;
 				System.arraycopy(tmp.fingerAngles, 0, fingerAngles, 0, 5);
 				System.arraycopy(tmp.pose, 0, pose, 0, 16);
 				return true;
@@ -353,10 +341,7 @@ public class HandTracking
 		{
 			render = false;
 			right_model = false;
-			start = new Point();
-			angle = 0;
-			scale = 0;
-			fingerAngles = new float[5];
+			fingerAngles = new double[5];
 			pose = new double[16];
 		}
 	}
