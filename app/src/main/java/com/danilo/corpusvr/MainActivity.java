@@ -9,6 +9,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
@@ -58,6 +59,17 @@ public class MainActivity extends AppCompatActivity
 		}
 	};
 
+	private View.OnClickListener mOnClickListener = new View.OnClickListener()
+	{
+		@Override
+		public void onClick(View v)
+		{
+			Log.d(TAG, "TEST");
+//			if (mJavaCameraView != null)
+//				mJavaCameraView.test();
+		}
+	};
+
 	@Override
 	protected void onSaveInstanceState(Bundle outState)
 	{
@@ -101,6 +113,8 @@ public class MainActivity extends AppCompatActivity
 		mFrame.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 		mFrame.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
 		setContentView(mFrame);
+
+		mFrame.setOnClickListener(mOnClickListener);
 
 		// Create HandTracking Object
 		mHandTracking = new HandTracking();

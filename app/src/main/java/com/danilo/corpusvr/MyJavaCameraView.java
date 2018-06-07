@@ -208,7 +208,6 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		mHull.release();
 		mDefects.release();
 		mProjectionCV.release();
-
 		mHandTracking.release();
 	}
 

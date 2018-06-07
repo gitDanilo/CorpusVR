@@ -82,10 +82,10 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 //			Matrix.invertM(mMVPInvMat, 0, mMVPInvMat, 0);
 		}
 
-		mModelMatF[12] = (2.0f * ((float) (point.x) / (float) (mScreenWidth))) - 1.0f;
-		mModelMatF[13] = 1.0f - (2.0f * ((float) (point.y) / (float) (mScreenHeight)));
-		mModelMatF[14] = /*2.0f * 0.5f*//*Z*//* - 1.0f*/0;
-		mModelMatF[15] = 1.0f;
+		mModelMatF[12] = (2.0 * (point.x / mScreenWidth)) - 1.0;
+		mModelMatF[13] = 1.0 - (2.0 * (point.y / mScreenHeight));
+		mModelMatF[14] = /*2.0 * 0.5*//*Z*//* - 1.0*/0;
+		mModelMatF[15] = 1.0;
 
 		Matrix.multiplyMV(mModelMatF, 12, mMVPInvMat.getDoubleValues(), 0, mModelMatF, 12);
 

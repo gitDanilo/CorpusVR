@@ -29,6 +29,8 @@ public class HandTracking
 
 	private static final double POSE_SC_COMP    = 25;
 	private static final double POSE_X_ROT_COMP = 20.0;
+	private static final double POSE_Z_ROT_COMP = 4.0;
+	private static final double POSE_Y_TR_COMP  = 0.013;
 
 	private static final float MAX_DISTANCE = 99999.0f;
 	private static final float DELTA_LENGTH = 0.8f; // 0.7f
@@ -88,25 +90,20 @@ public class HandTracking
 
 		// Reference points
 
-//		mRefPoints.fromArray(new Point3(-1.1930, -0.1420, 0),
-//							 new Point3(-0.5676, 1.2018, 0),
-//							 new Point3(0.0343, 1.1836, 0),
-//							 new Point3(0.5793, 0.9767, 0));
-
-//		mRefPoints.fromArray(new Point3(-0.9254,  -0.0745, 0),
-//							 new Point3(-0.5078, 0.9318 , 0),
-//							 new Point3(0.0266 , 0.8952 , 0),
-//							 new Point3(0.4991 , 0.6803 , 0));
-
-//		mRefPoints.fromArray(new Point3(-0.8488, -0.0134, 0),
-//							 new Point3(-0.3989, 0.9789 , 0),
-//							 new Point3(0.1340 , 0.9250 , 0),
-//							 new Point3(0.5228 , 0.7019 , 0));
-
 		mRefPoints.fromArray(new Point3(-0.7855, -0.0178, 0),
 							 new Point3(-0.3355, 0.9745 , 0),
 							 new Point3(0.1974 , 0.9206 , 0),
 							 new Point3(0.5862 , 0.6976 , 0));
+
+//		mRefPoints.fromArray(new Point3(-0.7855, -0.0178, 0),
+//							 new Point3(-0.3355, 0.9745 , 0),
+//							 new Point3( 0.1831, 0.9224 , 0),
+//							 new Point3(0.5862 , 0.6976 , 0));
+
+//		mRefPoints.fromArray(new Point3(-0.9265, -0.0125, 0),
+//							 new Point3(-0.3064, 0.9434 , 0),
+//							 new Point3(0.1923 , 0.9327 , 0),
+//							 new Point3(0.7427 , 0.6633 , 0));
 	}
 
 	public void release()
@@ -233,7 +230,7 @@ public class HandTracking
 				if (Imgproc.isContourConvex(mIntPalmPointsMat))
 				{
 					// Find the hand's Euler angles and coordinates
-					Calib3d.solvePnP(mRefPoints, mPalmPointsMat, intrinsicParam, mDistCoeffs, mRVec, mTVec);
+					Calib3d.solvePnP(mRefPoints, mPalmPointsMat, intrinsicParam, mDistCoeffs, mRVec, mTVec, false, Calib3d.SOLVEPNP_ITERATIVE);
 
 					double[] rVecArray = mRVec.toArray();
 					rVecArray[0] *= -1.0; // Inverted X angle
@@ -244,7 +241,7 @@ public class HandTracking
 
 					double[] tVecArray = mTVec.toArray();
 
-					mHandPoseTemp.render = true;
+					mHandPoseTemp.render = !right_model; // Only render left hand model for now
 					mHandPoseTemp.right_model = right_model;
 
 					mHandPoseTemp.pose[0] = mRotation.get(0,0)[0];
@@ -264,18 +261,21 @@ public class HandTracking
 					mHandPoseTemp.pose[14] = - tVecArray[2];
 					mHandPoseTemp.pose[15] = 1;
 
+					// Model compensation
 					Matrix.scaleM(mHandPoseTemp.pose, 0, POSE_SC_COMP, POSE_SC_COMP, POSE_SC_COMP);
 					Matrix.rotateM(mHandPoseTemp.pose, 0, POSE_X_ROT_COMP, 1, 0, 0);
+					//Matrix.rotateM(mHandPoseTemp.pose, 0, POSE_Z_ROT_COMP, 0, 0, 1);
+					Matrix.translateM(mHandPoseTemp.pose, 0, 0, POSE_Y_TR_COMP, 0);
 
 					// Calculate finger angles
 					// https://stackoverflow.com/questions/15022630/how-to-calculate-the-angle-from-rotation-matrix
-					double palmRotation = Math.atan2(mHandPoseTemp.pose[4], mHandPoseTemp.pose[0]);
+					double palmRotationZ = Math.atan2(mHandPoseTemp.pose[4], mHandPoseTemp.pose[0]);
 
 					mHandPoseTemp.fingerAngles[0] = arcTang(mHandDefectsList.get(mFingerIndices[0]).farthestPoint,
 															right_model ?
 															mHandDefectsList.get(mFingerIndices[0]).startPoint :
 															mHandDefectsList.get(mFingerIndices[0]).endPoint);
-					mHandPoseTemp.fingerAngles[0] -= palmRotation;
+					mHandPoseTemp.fingerAngles[0] -= palmRotationZ;
 					mHandPoseTemp.fingerAngles[0] -= DEF_FINGER_ANGLES[0];
 					mHandPoseTemp.fingerAngles[0] *= -MathUtil.PRE_180_DIV_PI;
 					for (int i = 1, j = mHandPoseTemp.fingerAngles.length; i < j; ++i)
@@ -284,7 +284,7 @@ public class HandTracking
 																right_model ?
 																mHandDefectsList.get(mFingerIndices[i]).endPoint :
 																mHandDefectsList.get(mFingerIndices[i]).startPoint);
-						mHandPoseTemp.fingerAngles[i] -= palmRotation;
+						mHandPoseTemp.fingerAngles[i] -= palmRotationZ;
 						mHandPoseTemp.fingerAngles[i] -= DEF_FINGER_ANGLES[i];
 						mHandPoseTemp.fingerAngles[i] *= -MathUtil.PRE_180_DIV_PI;
 					}
