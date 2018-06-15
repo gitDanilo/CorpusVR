@@ -126,8 +126,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 		/* Do nothing. Wait until surfaceChanged delivered */
 	}
 
-	;
-
 	public void surfaceDestroyed(SurfaceHolder holder)
 	{
 		synchronized (mSyncObject)
@@ -136,8 +134,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 			checkCurrentState();
 		}
 	}
-
-	;
 
 	/**
 	 * This method is provided for clients, so they can enable the camera connection.
@@ -151,8 +147,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 			checkCurrentState();
 		}
 	}
-
-	;
 
 	/**
 	 * This method is provided for clients, so they can disable camera connection and stop
@@ -272,7 +266,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 				}
 				break;
 		}
-		;
 	}
 
 	private void processExitState(int state)
@@ -287,7 +280,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 				onExitStoppedState();
 				break;
 		}
-		;
 	}
 
 	private void onEnterStoppedState()
@@ -519,8 +511,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 		public int getHeight(Object obj);
 	}
 
-	;
-
 	protected class CvCameraViewListenerAdapter implements CvCameraViewListener2
 	{
 		private int mPreviewFormat = RGBA;
@@ -555,7 +545,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 				default:
 					Log.e(TAG, "Invalid frame format! Only RGBA and Gray Scale are supported!");
 			}
-			;
 
 			return result;
 		}

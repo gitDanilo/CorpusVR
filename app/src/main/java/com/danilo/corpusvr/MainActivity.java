@@ -126,6 +126,7 @@ public class MainActivity extends AppCompatActivity
 		mJavaCameraView = new MyJavaCameraView(this, 99, mHandTracking, mRenderer);
 		mJavaCameraView.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 		mJavaCameraView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+		mJavaCameraView.setZOrderOnTop(true);
 		mFrame.addView(mJavaCameraView);
 
 		// Rajawali Surface View
