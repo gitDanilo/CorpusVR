@@ -242,10 +242,6 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 				}
 			}
 
-//			Rect objBB = Imgproc.boundingRect(mListOfContours.get(mLargestContour));
-//			mROI = mBinMat.submat(objBB);
-//			Imgproc.dilate(mROI, mROI, mElementMat);
-
 			Imgproc.convexHull(mListOfContours.get(mLargestContour), mHull, true);
 			if (!mHull.empty())
 			{

@@ -144,9 +144,7 @@ public class JavaCamera2View extends CameraBridgeViewBase
 				for (String cameraID : camList)
 				{
 					CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraID);
-					if ((mCameraIndex == CameraBridgeViewBase.CAMERA_ID_BACK && characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK) || (mCameraIndex ==
-                                                                                                                                                                                      CameraBridgeViewBase
-                                                                                                                                                                                              .CAMERA_ID_FRONT && characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT))
+					if ((mCameraIndex == CameraBridgeViewBase.CAMERA_ID_BACK && characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK) || (mCameraIndex == CameraBridgeViewBase.CAMERA_ID_FRONT && characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT))
 					{
 						mCameraID = cameraID;
 						break;
@@ -243,7 +241,7 @@ public class JavaCamera2View extends CameraBridgeViewBase
 					{
 						mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
 						mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
-						mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, new Range<Integer>(30, 30));
+						mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, new Range<>(30, 30));
 
 						mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, mBackgroundHandler);
 						Log.i(LOGTAG, "CameraPreviewSession has been started");

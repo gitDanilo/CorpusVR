@@ -19,6 +19,7 @@ import org.opencv.imgproc.Imgproc;
 
 import java.util.List;
 
+
 /**
  * This class is an implementation of the Bridge View between OpenCV and Java Camera.
  * This class relays on the functionality available in base class and only implements
@@ -181,9 +182,13 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 					mPreviewFormat = params.getPreviewFormat();
 
 					Log.d(TAG, "Set preview size to " + Integer.valueOf((int) frameSize.width) + "x" + Integer.valueOf((int) frameSize.height));
-					params.setPreviewSize((int) frameSize.width, (int) frameSize.height);
+					int tmpWidth = (int) frameSize.width;
+					int tmpHeight = (int) frameSize.height;
+					params.setPreviewSize(tmpWidth, tmpHeight);
+					params.set("video-size", Integer.toString(tmpWidth) + 'x' + Integer.toString(tmpHeight));
+					params.setPictureSize(tmpWidth, tmpHeight);
 
-					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH && !android.os.Build.MODEL.equals("GT-I9100"))
+					//if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH && !android.os.Build.MODEL.equals("GT-I9100"))
 						params.setRecordingHint(true);
 
 					List<String> FocusModes = params.getSupportedFocusModes();
@@ -196,6 +201,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
 					mCamera.setParameters(params);
 					params = mCamera.getParameters();
+					Log.d(TAG, params.flatten());
 
 					mFrameWidth = params.getPreviewSize().width;
 					mFrameHeight = params.getPreviewSize().height;
