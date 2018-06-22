@@ -72,6 +72,7 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 	private Mat mRGBA;
 	private Mat mHSV;
 	private Mat mBinMat;
+	private Mat mResizedFrame;
 	//private Mat mROI;
 	//private Mat mElementMat;
 
@@ -177,6 +178,7 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		mScreenWidth = width;
 		mScreenHeight = height;
 		mHSV = new Mat(height, width, CvType.CV_8UC3);
+		mResizedFrame = new Mat(getHeight(), getWidth(), CvType.CV_8UC4);
 		mBinMat = new Mat(height, width, CvType.CV_8UC1);
 		mFOVX = mCamera.getParameters().getHorizontalViewAngle();
 		mFOVY = mCamera.getParameters().getVerticalViewAngle();
@@ -257,9 +259,6 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 						mHandDefect.farthestPoint.set(mListOfContours.get(mLargestContour).get(defectsList[mIndex++], 0));
 						mHandDefect.length = defectsList[mIndex] / 256.0f;
 						angle = innerAngle(mHandDefect.startPoint, mHandDefect.endPoint, mHandDefect.farthestPoint);
-
-//						Imgproc.circle(mRGBA, mHandDefect.farthestPoint, 4, COLOR_GREEN, 2);
-
 						if (mHandDefect.length >= MIN_FINGER_LENGTH &&
 							mHandDefect.length <= MAX_FINGER_LENGTH &&
 							angle >= MIN_INNER_ANGLE &&
@@ -268,17 +267,17 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 							if (!mHandTracking.addHandDefect(mHandDefect))
 								break;
 						}
-						else
-						{
-							length = distanceP2P(mHandDefect.startPoint, mHandDefect.endPoint);
-							if (length >= MIN_BASE_LENGTH &&
-								angle >= MIN_PALM_INNER_ANGLE &&
-								angle <= MAX_PALM_INNER_ANGLE)
-							{
-								if (!mHandTracking.addPalmPoint(mHandDefect.farthestPoint))
-									break;
-							}
-						}
+//						else
+//						{
+//							length = distanceP2P(mHandDefect.startPoint, mHandDefect.endPoint);
+//							if (length >= MIN_BASE_LENGTH &&
+//								angle >= MIN_PALM_INNER_ANGLE &&
+//								angle <= MAX_PALM_INNER_ANGLE)
+//							{
+//								if (!mHandTracking.addPalmPoint(mHandDefect.farthestPoint))
+//									break;
+//							}
+//						}
 					}
 					Imgproc.drawContours(mRGBA, mListOfContours, mLargestContour, COLOR_GREEN, 1);
 					mHandTracking.calculateHandPose(getIntrinsicParam(), mRGBA);
@@ -290,6 +289,11 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 
 		mHandTracking.updateHandPose();
 
+		if (mResizedFrame != null)
+		{
+			Imgproc.resize(mRGBA, mResizedFrame, mResizedFrame.size());
+			return mResizedFrame;
+		}
 		return mRGBA;
 	}
 }

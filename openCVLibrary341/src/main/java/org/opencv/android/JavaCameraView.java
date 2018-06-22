@@ -34,8 +34,8 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
 	private static final int MAGIC_TEXTURE_ID = 10;
 	private static final String TAG = "JavaCameraView";
-	private static final int MIN_FPS = 15000; // Minimum fps = 15
-	private static final int MAX_FPS = 15000; // Maximum fps = 15
+	private static final int MIN_FPS = 30000; // Minimum fps = 30
+	private static final int MAX_FPS = 30000; // Maximum fps = 30
 	protected Camera mCamera;
 	protected JavaCameraFrame[] mCameraFrame;
 	private float mScale = 0;
@@ -159,8 +159,10 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 			try
 			{
 				Camera.Parameters params = mCamera.getParameters();
+
 				params.setPreviewFpsRange(MIN_FPS, MAX_FPS);
 				params.setExposureCompensation(/*params.getMaxExposureCompensation() / 4*/1);
+
 				Log.d(TAG, "getSupportedPreviewSizes()");
 				List<android.hardware.Camera.Size> sizes = params.getSupportedPreviewSizes();
 
@@ -181,12 +183,13 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
 					mPreviewFormat = params.getPreviewFormat();
 
-					Log.d(TAG, "Set preview size to " + Integer.valueOf((int) frameSize.width) + "x" + Integer.valueOf((int) frameSize.height));
 					int tmpWidth = (int) frameSize.width;
 					int tmpHeight = (int) frameSize.height;
+					Log.d(TAG, "Set preview size to " + Integer.valueOf(tmpWidth) + "x" + Integer.valueOf(tmpHeight));
 					params.setPreviewSize(tmpWidth, tmpHeight);
-					params.set("video-size", Integer.toString(tmpWidth) + 'x' + Integer.toString(tmpHeight));
-					params.setPictureSize(tmpWidth, tmpHeight);
+
+//					params.set("video-size", Integer.toString(tmpWidth) + 'x' + Integer.toString(tmpHeight));
+//					params.setPictureSize(tmpWidth, tmpHeight);
 
 					//if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH && !android.os.Build.MODEL.equals("GT-I9100"))
 						params.setRecordingHint(true);
@@ -219,6 +222,9 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
 					mRectSrc = new Rect(0, 0, mFrameWidth, mFrameHeight);
 					mRectDst = new Rect((int) ((width - mScale * mFrameWidth) / 2), (int) ((height - mScale * mFrameHeight) / 2), (int) ((width - mScale * mFrameWidth) / 2 + mScale * mFrameWidth), (int) ((height - mScale * mFrameHeight) / 2 + mScale * mFrameHeight));
+
+					mScreenWidth = (int) ((width - mScale * mFrameWidth) / 2 + mScale * mFrameWidth);
+					mScreenHeight = (int) ((height - mScale * mFrameHeight) / 2 + mScale * mFrameHeight);
 
 					if (mFpsMeter != null)
 					{

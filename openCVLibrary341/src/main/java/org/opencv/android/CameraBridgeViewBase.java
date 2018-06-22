@@ -47,6 +47,8 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 	protected int mFrameHeight;
 	protected int mMaxHeight;
 	protected int mMaxWidth;
+	protected int mScreenWidth;
+	protected int mScreenHeight;
 	protected int mPreviewFormat = RGBA;
 	protected int mCameraIndex = CAMERA_ID_ANY;
 	protected boolean mEnabled;
@@ -366,7 +368,8 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 			{
 				mCanvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
 
-				mCanvas.drawBitmap(mCacheBitmap, mRectSrc, mRectDst, null);
+//				mCanvas.drawBitmap(mCacheBitmap, mRectSrc, mRectDst, null);
+				mCanvas.drawBitmap(mCacheBitmap, 0, 0, null);
 
 				if (mFpsMeter != null)
 				{
@@ -397,7 +400,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 	// NOTE: On Android 4.1.x the function must be called before SurfaceTexture constructor!
 	protected void AllocateCache()
 	{
-		mCacheBitmap = Bitmap.createBitmap(mFrameWidth, mFrameHeight, Bitmap.Config.ARGB_8888);
+		mCacheBitmap = Bitmap.createBitmap(mScreenWidth, mScreenHeight, Bitmap.Config.ARGB_8888);
 	}
 
 	/**

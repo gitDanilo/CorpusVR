@@ -13,7 +13,7 @@ android {
     compileSdkVersion 26
     defaultConfig {
         applicationId "com.danilo.corpusvr"
-        minSdkVersion 26
+        minSdkVersion 22
         targetSdkVersion 26
         versionCode 1
         versionName "1.0"
