@@ -368,7 +368,8 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 			mCameraFrameReady = true;
 			this.notify();
 		}
-		if (mCamera != null) mCamera.addCallbackBuffer(mBuffer);
+		if (mCamera != null)
+			mCamera.addCallbackBuffer(mBuffer);
 	}
 
 	public static class JavaCameraSizeAccessor implements ListItemAccessor
@@ -467,7 +468,8 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
 				if (!mStopThread && hasFrame)
 				{
-					if (!mFrameChain[1 - mChainIdx].empty()) deliverAndDrawFrame(mCameraFrame[1 - mChainIdx]);
+					if (!mFrameChain[1 - mChainIdx].empty())
+						deliverAndDrawFrame(mCameraFrame[1 - mChainIdx]);
 				}
 			} while (!mStopThread);
 			Log.d(TAG, "Finish processing thread");

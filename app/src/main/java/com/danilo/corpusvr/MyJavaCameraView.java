@@ -128,7 +128,6 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		// https://www.mathsisfun.com/algebra/trig-cosine-law.html (The Law of Cosines)
 		double A = Math.acos((CBx * CAx + CBy * CAy) / (Math.sqrt(CBx * CBx + CBy * CBy) * Math.sqrt(CAx * CAx + CAy * CAy)));    // (a² + b² − c²) / 2
 		return A * MathUtil.PRE_180_DIV_PI;
-
 	}
 
 	public MatOfDouble getIntrinsicParam()
@@ -183,8 +182,8 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 		mFOVX = mCamera.getParameters().getHorizontalViewAngle();
 		mFOVY = mCamera.getParameters().getVerticalViewAngle();
 		mHierarchy = new Mat();
-		mMinHSV1 = new Scalar(0, 20, 60); // 0, 20, 60
-		mMaxHSV1 = new Scalar(20, 150, 255); // 20, 150, 255
+		mMinHSV1 = new Scalar(0, 20, 60);
+		mMaxHSV1 = new Scalar(20, 150, 255);
 		mListOfContours = new ArrayList<>();
 		mHull = new MatOfInt();
 		mDefects = new MatOfInt4();
@@ -250,7 +249,7 @@ public class MyJavaCameraView extends JavaCameraView implements CameraBridgeView
 				Imgproc.convexityDefects(mListOfContours.get(mLargestContour), mHull, mDefects);
 				if (mDefects.rows() >= HandTracking.MIN_HAND_DEFECTS)
 				{
-					double angle, length;
+					double angle;
 					int[] defectsList = mDefects.toArray();
 					for (mIndex = 0; mIndex < defectsList.length; ++mIndex)
 					{

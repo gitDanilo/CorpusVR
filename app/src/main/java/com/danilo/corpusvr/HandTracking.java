@@ -186,7 +186,7 @@ public class HandTracking
 		int size = mHandDefectsList.size();
 		if (size >= MIN_HAND_DEFECTS && size <= MAX_HAND_DEFECTS)
 		{
-			int index = find3ClosestPoints();
+			int index = findClosest3Points();
 			if (index != -1)
 			{
 				int prev_index = index == 0 ? size - 1 : index - 1;
@@ -301,7 +301,7 @@ public class HandTracking
 	}
 
 	// Returns the closest 3 points that respect the min and max threshold distances
-	private int find3ClosestPoints()
+	private int findClosest3Points()
 	{
 		int defectsSize = mHandDefectsList.size();
 

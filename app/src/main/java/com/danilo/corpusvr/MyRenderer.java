@@ -1,21 +1,14 @@
 package com.danilo.corpusvr;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.view.MotionEvent;
 
 import com.example.rajawali.Object3D;
 import com.example.rajawali.lights.DirectionalLight;
 import com.example.rajawali.loader.LoaderOBJ;
 import com.example.rajawali.loader.ParsingException;
-import com.example.rajawali.materials.Material;
-import com.example.rajawali.materials.methods.DiffuseMethod;
-import com.example.rajawali.math.Matrix;
 import com.example.rajawali.math.Matrix4;
-import com.example.rajawali.primitives.Sphere;
 import com.example.rajawali.renderer.Renderer;
-
-import org.opencv.core.Point;
 
 public class MyRenderer extends Renderer implements CameraProjectionListener
 {
@@ -27,17 +20,11 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	private int mScreenHeight = -1;
 
 	// Tracking information
-//	private static final double REF_FINGER_PTS[][] = new double[][]{{-0.0200068,  0.0397161},
-//																    { 0.0201293,  0.0293674},
-//																    { 0.0299186,  0.0100685},
-//																    { 0.0317366, -0.0064334},
-//																    { 0.0230661, -0.0267112}};
-
 	private int mBoneFingerIndex[];
 	private HandTracking.HandPose mHandPose;
 	private HandTracking mHandTracking;
-	private long mBadTrackFramesCount;
-	private static final long MAX_BAD_TRACK_FRAMES = 8;
+	private long mBadFrames;
+	private static final long MAX_BAD_FRAMES = 8;
 	private static final double REF_FINGER_PTS[][] = new double[][]{{-0.042,  0.012},
 																	{-0.025, -0.025},
 																	{-0.004, -0.032},
@@ -50,10 +37,10 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 																	   {"ANATOMY---HAND-AND-ARM-BONES.009", "ANATOMY---HAND-AND-ARM-BONES.011", "ANATOMY---HAND-AND-ARM-BONES.005"}};
 
 	// Matrices
-	private double[] mModelMatF;
-	private Matrix4 mProjMat;
-	private Matrix4 mMVPInvMat;
+	//	private double[] mModelMatF;
+	//	private Matrix4 mMVPInvMat;
 	private Matrix4 mTempTransf;
+	private Matrix4 mProjMat;
 	private Matrix4 mTempViewMat;
 	private Matrix4 mTempModelMat;
 	private Matrix4 mPalmModeViewMat;
@@ -61,63 +48,64 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 
 	// Scene objects
 	private DirectionalLight mDirectionalLight;
-	private Sphere mSphere;
+//	private Sphere mSphere;
 	private Object3D mLeftHandModel;
-	private Object3D mRightHandModel;
+//	private Object3D mRightHandModel;
 
 	// https://stackoverflow.com/questions/7692988/opengl-math-projecting-screen-space-to-world-space-coords
 	// Converts the coordinates from OpenCV space to OpenGL's (Used for 2D perspective)
-	private void screenToWorld(Point point)
-	{
-		if (mScreenWidth == -1 || mScreenHeight == -1)
-			return;
-
-		if (mMVPInvMat == null)
-		{
-			mMVPInvMat = new Matrix4(mProjMat);
-			mMVPInvMat.multiply(getCurrentCamera().getViewMatrix()).inverse();
-
-//			mMVPInvMat = new float[16];
-//			Matrix.multiplyMM(mMVPInvMat, 0, mProjMat.getFloatValues(), 0, getCurrentCamera().getViewMatrix().getFloatValues(), 0);
-//			Matrix.invertM(mMVPInvMat, 0, mMVPInvMat, 0);
-		}
-
-		mModelMatF[12] = (2.0 * (point.x / mScreenWidth)) - 1.0;
-		mModelMatF[13] = 1.0 - (2.0 * (point.y / mScreenHeight));
-		mModelMatF[14] = /*2.0 * 0.5*//*Z*//* - 1.0*/0;
-		mModelMatF[15] = 1.0;
-
-		Matrix.multiplyMV(mModelMatF, 12, mMVPInvMat.getDoubleValues(), 0, mModelMatF, 12);
-
-		mModelMatF[12] /= mModelMatF[15];
-		mModelMatF[13] /= mModelMatF[15];
-		mModelMatF[14] /= mModelMatF[15];
-		mModelMatF[15] = 1;
-	}
+//	private void screenToWorld(Point point)
+//	{
+//		if (mScreenWidth == -1 || mScreenHeight == -1)
+//			return;
+//
+//		if (mMVPInvMat == null)
+//		{
+//			mMVPInvMat = new Matrix4(mProjMat);
+//			mMVPInvMat.multiply(getCurrentCamera().getViewMatrix()).inverse();
+//
+////			mMVPInvMat = new float[16];
+////			Matrix.multiplyMM(mMVPInvMat, 0, mProjMat.getFloatValues(), 0, getCurrentCamera().getViewMatrix().getFloatValues(), 0);
+////			Matrix.invertM(mMVPInvMat, 0, mMVPInvMat, 0);
+//		}
+//
+//		mModelMatF[12] = (2.0 * (point.x / mScreenWidth)) - 1.0;
+//		mModelMatF[13] = 1.0 - (2.0 * (point.y / mScreenHeight));
+//		mModelMatF[14] = /*2.0 * 0.5*//*Z*//* - 1.0*/0;
+//		mModelMatF[15] = 1.0;
+//
+//		Matrix.multiplyMV(mModelMatF, 12, mMVPInvMat.getDoubleValues(), 0, mModelMatF, 12);
+//
+//		mModelMatF[12] /= mModelMatF[15];
+//		mModelMatF[13] /= mModelMatF[15];
+//		mModelMatF[14] /= mModelMatF[15];
+//		mModelMatF[15] = 1;
+//	}
 
 	private void calculateFingerTransf(Matrix4 palmPose)
 	{
 		for (int i = 0; i < 5; ++i)
 		{
+			// Carrega identidade
 			mTempModelMat.identity();
 
-			// Translate to the origin
+			// Translada para a origem
 			mTempTransf.identity().setTranslation(- REF_FINGER_PTS[i][0], - REF_FINGER_PTS[i][1], 0);
 			mTempModelMat.leftMultiply(mTempTransf);
 
-			// Rotate fingers on Z axis
+			// Rotaciona no eixo Z
 			mTempTransf.identity().setRotate(0,0,1, mHandPose.fingerAngles[i]);
 			mTempModelMat.leftMultiply(mTempTransf);
 
-			// Translate back
+			// Translada de volta
 			mTempTransf.identity().setTranslation(REF_FINGER_PTS[i][0], REF_FINGER_PTS[i][1], 0);
 			mTempModelMat.leftMultiply(mTempTransf);
 
-			// Apply palm pose transformations
+			// Aplica as transformações da palma
 			mTempViewMat.identity().inverse();
 			mTempViewMat.leftMultiply(palmPose);
 
-			// Generate the finger ModelView Matrix
+			// Gera a ModelView do dedo(i)
 			mFingerModelViewMat[i].setAll(mTempViewMat).multiply(mTempModelMat);
 		}
 	}
@@ -152,12 +140,18 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 		//getCurrentCamera().getModelMatrix().identity();
 		//getCurrentCamera().getViewMatrix().identity();
 
+		//		mModelMatF = new double[16];
+
+		// Inicializa a matriz de projeção da câmera
 		if (mProjMat != null)
 			getCurrentCamera().setProjectionMatrix(mProjMat);
 
-		mModelMatF = new double[16];
-
+		// Inicializa as matrizes temporárias
 		mTempTransf = new Matrix4();
+		mTempViewMat = new Matrix4();
+		mTempModelMat = new Matrix4();
+
+		// Inicializa as matrizes ModelView de cada dedo
 		mFingerModelViewMat = new Matrix4[5];
 		mFingerModelViewMat[0] = new Matrix4();
 		mFingerModelViewMat[1] = new Matrix4();
@@ -165,30 +159,29 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 		mFingerModelViewMat[3] = new Matrix4();
 		mFingerModelViewMat[4] = new Matrix4();
 
-		mTempViewMat = new Matrix4();
-		mTempModelMat = new Matrix4();
+		// Inicializa a matriz ModelView da palma
 		mPalmModeViewMat = new Matrix4();
 
-		// Scene basic light
+		// Inicializa a luz da cena
 		mDirectionalLight = new DirectionalLight(4, 4, 4);
 		mDirectionalLight.setColor(1.0f, 1.0f, 1.0f);
 		mDirectionalLight.setPower(1.25f);
 		getCurrentScene().addLight(mDirectionalLight);
 
 		// Debug object basic material (disable light so it looks 2D)
-		Material material = new Material();
-		material.enableLighting(true);
-		material.setDiffuseMethod(new DiffuseMethod.Lambert());
-		material.setColor(Color.RED);
+//		Material material = new Material();
+//		material.enableLighting(true);
+//		material.setDiffuseMethod(new DiffuseMethod.Lambert());
+//		material.setColor(Color.RED);
 
 		// Debug object
-		mSphere = new Sphere(0.002f, 24, 24);
-		mSphere.setMaterial(material);
-		getCurrentScene().addChild(mSphere);
-		mSphere.setUseCustomModelView(true);
-		mSphere.setVisible(true);
+//		mSphere = new Sphere(0.002f, 24, 24);
+//		mSphere.setMaterial(material);
+//		getCurrentScene().addChild(mSphere);
+//		mSphere.setUseCustomModelView(true);
+//		mSphere.setVisible(true);
 
-		// Load OBJ and MTL files
+		// Carrega o arquivo .OBJ e .MTL
 		LoaderOBJ loaderOBJ = new LoaderOBJ(this, R.raw.lefthand_obj);
 		try
 		{
@@ -198,21 +191,31 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 		{
 			e.printStackTrace();
 		}
+
+		// Obtém a instância do objeto carregado
 		mLeftHandModel = loaderOBJ.getParsedObject();
+
+		// Adiciona o objeto na cena
 		getCurrentScene().addChild(mLeftHandModel);
 
 		int i, j = mLeftHandModel.getNumChildren();
 		mBoneFingerIndex = new int[j];
 		for (i = 0; i < j; ++i)
 		{
+			// Permite que seja utilizada uma matriz customizada
 			mLeftHandModel.getChildAt(i).setUseCustomModelView(true);
+
+			// Obtêm o índice do dedo
 			mBoneFingerIndex[i] = getFingerIndex(mLeftHandModel.getChildAt(i).getName());
 		}
+
+		// Define o modelo como invisível na cena
 		mLeftHandModel.setVisible(false);
 
-		//	mLeftHandModel.setMaterial(material); Its possible to remove the loaded material and change for a new one: https://github.com/Rajawali/Rajawali/issues/2015
+		// Inicializa o contador
+		mBadFrames = MAX_BAD_FRAMES;
 
-		mBadTrackFramesCount = MAX_BAD_TRACK_FRAMES;
+		//	mLeftHandModel.setMaterial(material); Its possible to remove the loaded material and change for a new one: https://github.com/Rajawali/Rajawali/issues/2015
 	}
 
 	@Override
@@ -220,29 +223,36 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 	{
 		super.onRender(ellapsedRealtime, deltaTime);
 
+		// Lê as informações do objeto compartilhado
 		mHandPose = mHandTracking.getObjStatus();
-		if (mHandPose.render || mBadTrackFramesCount < MAX_BAD_TRACK_FRAMES)
-		{
-			if (mHandPose.render)
-				mBadTrackFramesCount = 0;
-			else
-				++mBadTrackFramesCount;
 
+		if (mHandPose.render || mBadFrames < MAX_BAD_FRAMES)
+		{
+			// Atualiza o valor do contador
+			if (mHandPose.render)
+				mBadFrames = 0;
+			else
+				++mBadFrames;
+
+			// Muda a visibilidade do objeto
 			if (!mLeftHandModel.isVisible())
 				mLeftHandModel.setVisible(true);
 
+			// Atualiza a ModelView da palma com a nova pose
 			mPalmModeViewMat.setAll(mHandPose.pose);
 
+			// Calcula as ModelView's dos dedos
 			calculateFingerTransf(mPalmModeViewMat);
 
+			// Atualiza todos os objetos do modelo 3D com a nova ModelView
 			for (int i = 0, j = mLeftHandModel.getNumChildren(), fingerIndex; i < j; ++i)
 			{
 				fingerIndex = mBoneFingerIndex[i];
-				if (fingerIndex != -1) // Finger bone
+				if (fingerIndex != -1) // Objeto de algum dedo
 				{
 					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(mFingerModelViewMat[fingerIndex]);
 				}
-				else // Palm bone
+				else // Objeto da palma
 				{
 					mLeftHandModel.getChildAt(i).getModelViewMatrix().setAll(mPalmModeViewMat);
 				}
@@ -273,13 +283,15 @@ public class MyRenderer extends Renderer implements CameraProjectionListener
 		mScreenWidth = width;
 		mScreenHeight = height;
 
-		mMVPInvMat = null;
+//		mMVPInvMat = null;
 
+		// Converte de float[] para Matrix4
 		if (mProjMat == null)
 			mProjMat = new Matrix4(projectionMat);
 		else
 			mProjMat.setAll(projectionMat);
 
+		// Caso a cena já tenha sido inicializada, atualiza a matriz
 		if (mSceneInitialized)
 			getCurrentCamera().setProjectionMatrix(mProjMat);
 	}
