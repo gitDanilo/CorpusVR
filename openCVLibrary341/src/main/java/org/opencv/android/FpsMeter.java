@@ -19,10 +19,13 @@ public class FpsMeter
 	boolean mIsInitialized = false;
 	int mWidth = 0;
 	int mHeight = 0;
-	private int mFramesCounter;
+	private long mFramesCounter;
 	private double mFrequency;
-	private long mprevFrameTime;
-	private String mStrfps;
+	private long mPrevFrameTime;
+	private String mStrFPS;
+	private long mTime;
+	private double mFPS;
+	private double mAvgFPS;
 	private double mMinFPS;
 	private double mMaxFPS;
 
@@ -30,11 +33,12 @@ public class FpsMeter
 	{
 		mFramesCounter = 0;
 		mFrequency = Core.getTickFrequency();
-		mprevFrameTime = Core.getTickCount();
-		mStrfps = "";
+		mPrevFrameTime = Core.getTickCount();
+		mStrFPS = "";
+		mTime = 0;
+		mFPS = 0;
 		mMinFPS = MAX_FPS;
 		mMaxFPS = 0;
-
 		mPaint = new Paint();
 		mPaint.setColor(Color.GREEN);
 		mPaint.setTextSize(60);
@@ -49,25 +53,25 @@ public class FpsMeter
 		}
 		else
 		{
-			mFramesCounter++;
+			++mFramesCounter;
+			mAvgFPS += (mFPS - mAvgFPS) / mFramesCounter;
 			if (mFramesCounter % STEP == 0)
 			{
-				long time = Core.getTickCount();
-				double fps = STEP * mFrequency / (time - mprevFrameTime);
-				if (fps < mMinFPS)
-					mMinFPS = fps;
-				if (fps > mMaxFPS)
-					mMaxFPS = fps;
-				mprevFrameTime = time;
+				mTime = Core.getTickCount();
+				mFPS = STEP * mFrequency / (mTime - mPrevFrameTime);
+				if (mFPS < mMinFPS)
+					mMinFPS = mFPS;
+				if (mFPS > mMaxFPS)
+					mMaxFPS = mFPS;
+				mPrevFrameTime = mTime;
 				if (mWidth != 0 && mHeight != 0)
 				{
-					mStrfps =  Integer.valueOf(mWidth) + "x" + Integer.valueOf(mHeight) + " / " + FPS_FORMAT.format(fps) + " FPS / " + FPS_FORMAT.format(mMinFPS) + " MIN. FPS / " + FPS_FORMAT.format(mMaxFPS) + " MAX. FPS";
+					mStrFPS =  Integer.valueOf(mWidth) + "x" + Integer.valueOf(mHeight) + " / " + FPS_FORMAT.format(mFPS) + " FPS / " + FPS_FORMAT.format(mMinFPS) + " MIN. FPS / " + FPS_FORMAT.format(mMaxFPS) + " MAX. FPS";
 				}
 				else
 				{
-					mStrfps = FPS_FORMAT.format(fps) + " FPS / " + FPS_FORMAT.format(mMinFPS) + " MIN. FPS / " + FPS_FORMAT.format(mMaxFPS) + " MAX. FPS";
+					mStrFPS = FPS_FORMAT.format(mFPS) + " FPS / " + FPS_FORMAT.format(mAvgFPS) + " AVG. FPS / " + FPS_FORMAT.format(mMinFPS) + " MIN. FPS / " + FPS_FORMAT.format(mMaxFPS) + " MAX. FPS";
 				}
-				//Log.i(TAG, mStrfps);
 			}
 		}
 	}
@@ -80,8 +84,8 @@ public class FpsMeter
 
 	public void draw(Canvas canvas, float offsetx, float offsety)
 	{
-		Log.d(TAG, mStrfps);
-		canvas.drawText(mStrfps, offsetx, offsety, mPaint);
+		Log.d(TAG, mStrFPS);
+		canvas.drawText(mStrFPS, offsetx, offsety, mPaint);
 	}
 
 }
