@@ -1,1 +1,1 @@
-[![CorpusVR CountPages alpha](https://imgur.com/JsuEm58)](https://www.youtube.com/watch?v=FA9HhLEk6nw)
+[![CorpusVR CountPages alpha](https://github.com/gitDanilo/CorpusVR/blob/master/corpusvr_demo.gif)](https://www.youtube.com/watch?v=FA9HhLEk6nw)
